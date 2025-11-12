@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "clarity-score"
+version = "0.1.0"
+description = "Scores a sentence's clarity via syntactic-ambiguity, WordNet-based specificity, and vague-word heuristics"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+requires-python = ">=3.10"
+authors = [{ name = "the clarity-score authors" }]
+dependencies = [
+    "nltk>=3.9",
+    "wn>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+# Placeholder for the future transformer-based SemanticScorer described in
+# ../ARCHITECTURE.md — not implemented yet, never a default dependency.
+transformer = [
+    "transformers>=4.40",
+    "torch>=2.2",
+]
+
+[project.scripts]
+clarity-score = "clarity_score.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/clarity_score"]
+
+[tool.ruff]
+line-length = 100

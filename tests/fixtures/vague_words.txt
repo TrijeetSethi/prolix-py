@@ -1,0 +1,80 @@
+# Curated list of semantically-empty / placeholder words and phrases.
+# One entry per line, lowercase. Multi-word entries are matched as
+# contiguous token sequences. Lines starting with # are comments.
+# Loaded by both the Python package (clarity_score.vague_lexicon) and the
+# Rust crate (clarity_score::vague_lexicon); extend via this single file
+# rather than editing either package directly.
+
+# generic placeholder nouns/pronouns
+something
+anything
+everything
+nothing
+someone
+somebody
+anybody
+everybody
+stuff
+things
+thing
+whatever
+somewhere
+anywhere
+
+# vague quantifiers / hedges
+some
+several
+various
+many
+few
+certain
+a lot
+a bit
+kind of
+sort of
+somewhat
+relatively
+fairly
+reasonably
+
+# vague evaluative adjectives (unspecific without a stated standard)
+appropriate
+adequate
+sufficient
+reasonable
+significant
+substantial
+relevant
+effective
+efficient
+good
+bad
+nice
+better
+various
+
+# vague/empty verbs
+make
+do
+handle
+deal with
+manage
+address
+facilitate
+streamline
+leverage
+utilize
+optimize
+enhance
+improve
+go
+
+# vague nouns for unspecified topics/objects
+aspect
+factor
+issue
+matter
+area
+element
+component
+way
