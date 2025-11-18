@@ -6,3 +6,11 @@
 {"id": "vague-pair-low", "sentence": "We need to handle some stuff with the thing", "notes": "loaded with vague-lexicon entries: handle, some, stuff, thing", "expect": {"pair_group": "vagueness", "pair_role": "low"}}
 {"id": "vague-pair-high", "sentence": "We need to replace the leaking kitchen faucet", "notes": "concrete minimal-pair counterpart with no vague-lexicon hits", "expect": {"pair_group": "vagueness", "pair_role": "high"}}
 {"id": "polysemy-high", "sentence": "I need to run to the bank before it closes", "notes": "'run' and 'bank' are both highly polysemous in WordNet", "expect": {"min_avg_senses": 3.0}}
+
+{"id": "readability-easy-low-syllables", "sentence": "The dog ran.", "notes": "one short sentence, all monosyllabic words — should score very high on readability", "expect": {"min_readability_clarity": 80}}
+{"id": "readability-hard-many-polysyllabic", "sentence": "The circumnavigation necessitated sophisticated navigational instruments.", "notes": "long sentence full of polysyllabic words — should score low on readability", "expect": {"max_readability_clarity": 60}}
+{"id": "readability-moderate", "sentence": "I saw the man with the telescope.", "notes": "standard English sentence — moderate readability expected", "expect": {}}
+
+{"id": "coherence-specific-high", "sentence": "Assemble a peanut butter and jelly sandwich.", "notes": "concrete, domain-coherent content words should produce high coherence score", "expect": {"min_context_coherence": 55}}
+{"id": "coherence-incongruous-low", "sentence": "The quantum device stirred the sandwich with precision.", "notes": "all specific words but semantically incongruous — low coherence expected", "expect": {"max_context_coherence": 45}}
+{"id": "coherence-vague-vs-specific", "sentence": "Make some stuff with things and handle it basically.", "notes": "vague sentence with vague content words — should have lower coherence than specific equivalent", "expect": {"min_readability_clarity": 60, "min_context_coherence": 30}}

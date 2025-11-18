@@ -26,6 +26,16 @@ transformer = [
     "transformers>=4.40",
     "torch>=2.2",
 ]
+# Readability metrics (Flesch-Kincaid, Gunning Fog, SMOG, etc.)
+# Zero additional dependencies — pure Python math on top of stdlib.
+readability = []
+# Semantic coherence scoring via sentence embeddings (MiniLM-L6-v2).
+# Requires sentence-transformers for lazy model download (~24MB, cached).
+semantic-coherence = [
+    "sentence-transformers>=3.0",
+]
+# Convenience extra that enables everything
+all = ["clarity-score[dev,readability,semantic-coherence]"]
 
 [project.scripts]
 clarity-score = "clarity_score.cli:main"
