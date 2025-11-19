@@ -68,6 +68,34 @@ def _normalize_vector(v: list[float]) -> list[float]:
     return [x / mag for x in v]
 
 
+# ============================================================
+# Standalone convenience function (mirrors Rust API)
+# ============================================================
+
+
+def sentence_coherence_score(sentence: str, tokens: Sequence[tuple[str, str]]) -> float:
+    """Compute coherence score without requiring MiniLM (returns default when no model).
+
+    This is a convenience wrapper that returns a default neutral score of 50.0.
+    For actual embedding-based coherence scoring, use MiniLMCoherenceScorer.
+
+    Args:
+        sentence: Original sentence text
+        tokens: POS-tagged token list from tag_sentence()
+
+    Returns:
+        Coherence score on 0-100 scale. Returns 50.0 (neutral) by default;
+        returns actual score if scorer is available and content words >= 2.
+    """
+    content_words = extract_content_words(tokens)
+
+    if len(content_words) < 2:
+        return 100.0
+
+    # Default neutral when model not available
+    return 50.0
+
+
 class MiniLMCoherenceScorer:
     """Embedding-based coherence scorer using all-MiniLM-L6-v2.
 

@@ -75,7 +75,10 @@ class TestSentenceWordCounting:
     )
     def test_sentence_count(self, text: str, expected_sentences: int):
         actual = count_sentences(text)
-        assert actual == max(1, expected_sentences) if expected_sentences > 0 else 0
+        if expected_sentences > 0:
+            assert actual == max(1, expected_sentences), f"Expected {max(1, expected_sentences)}, got {actual}"
+        else:
+            assert actual == 0, f"Expected 0 for empty text, got {actual}"
 
     @pytest.mark.parametrize(
         "text,expected_words",
@@ -117,9 +120,8 @@ class TestFormulaCorrectness:
 
     def test_formula_ranges(self):
         """All formulas should return values within expected ranges."""
-        long_text = ". ".join([
-            "This is a very long complicated sentence that contains many polysyllabic words and exceeds normal length"
-        ] for _ in range(5))
+        sentence = "This is a very long complicated sentence that contains many polysyllabic words and exceeds normal length"
+        long_text = ". ".join([sentence] * 5)
 
         metrics = compute_readability_metrics(long_text)
         assert 0.0 <= metrics.flesch_reading_ease <= 100.0, "FRE should be [0, 100]"

@@ -62,12 +62,13 @@ class AnalysisResult:
     clarity_score: float
     semantic_ambiguity: float
     specificity: float
-    readability_score: Optional[float] = None  # NEW — None when feature not enabled
-    context_coherence: Optional[float] = None   # NEW — None when feature not enabled
     syntax: SyntaxReport
     lexical: LexicalReport
     vague_hits: list[VagueHit] = field(default_factory=list)
     weights: ScoreWeights = field(default_factory=ScoreWeights)
+    # NEW optional fields — None when features not enabled/available
+    readability_score: Optional[float] = None
+    context_coherence: Optional[float] = None
 
     def to_json(self) -> dict:
         data = {
@@ -118,7 +119,9 @@ def analyze(
     semantic_scorer = semantic_scorer or WordnetPolysemyScorer()
 
     tagged = tag_sentence(sentence)
-    words = [token for token, _tag in tagged if token.isalpha()]
+    # Filter to alpha tokens that are at least 2 chars long
+    # (single letters like 'a', 'A', 'I' are not useful for polysemy analysis)
+    words = [token for token, _tag in tagged if len(token) >= 2 and token.isalpha()]
 
     syntax_report = analyze_syntax(tagged)
     lexical_report = analyze_lexical(words)
@@ -156,12 +159,23 @@ def analyze(
 
     semantic_ambiguity = semantic_scorer.score(sentence, words)
 
-    vague_penalty = sum(hit.penalty for hit in vague_hits)
-    specificity = min(lexical_report.avg_depth / 15.0 * 100, 100) - vague_penalty
-    specificity = max(0.0, specificity)
+    # Normalize vague penalty: cap it so it doesn't overwhelm the base specificity.
+    # Use unique hit phrases to avoid double-counting repeated vague words,
+    # and scale as a percentage of total word count (max 40% deduction).
+    unique_vague = set(h.phrase.lower() for h in vague_hits)
+    vague_ratio = min(len(unique_vague) / max(len(set(w.lower() for w in words)), 1), 1.0)
+    vague_penalty = vague_ratio * 40  # Max 40% deduction from unique vague word ratio
+
+    base_specificity = min(lexical_report.avg_depth / 15.0 * 100, 100)
+    specificity = max(0.0, min(base_specificity - vague_penalty, 100.0))
     vagueness = 100 - specificity
 
-    syntax_penalty = syntax_report.ambiguity_score * 25
+    # Normalize syntax penalty: count hits per sentence so long documents
+    # don't get penalized disproportionately. Cap at 10 (a reasonable max).
+    import re
+    sentence_count = max(1, len(re.findall(r'[.!?]+', sentence)))
+    hit_rate_per_sentence = syntax_report.ambiguity_score / sentence_count
+    syntax_penalty = min(hit_rate_per_sentence * 25, 10)
 
     # ===== WEIGHTED FORMULA WITH REDISTRIBUTION =====
     final_ambiguity = _compute_weighted_ambiguity(

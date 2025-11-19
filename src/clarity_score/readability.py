@@ -79,7 +79,11 @@ _SENTENCE_TERMINATORS_RE = re.compile(r'[.!?]+')
 def count_sentences(text: str) -> int:
     """Count sentence boundaries (. ! ?)."""
     sentences = _SENTENCE_TERMINATORS_RE.split(text)
-    return max(1, len([s.strip() for s in sentences if s.strip()]))
+    non_empty = [s.strip() for s in sentences if s.strip()]
+    if not non_empty:
+        return 0
+    # Default to 1 if no terminators found but text is present
+    return max(1, len(non_empty))
 
 
 _WORDS_RE = re.compile(r"[a-zA-Z]+(?:'[a-z]+)?")
@@ -95,17 +99,18 @@ def count_syllables(word: str) -> int:
 
     Algorithm (English):
         1. Lowercase the word
-        2. Remove trailing silent 'e' (except final 'le' as in 'table')
-        3. Count contiguous vowel groups (a, e, i, o, u, y)
-        4. Clamp between 1 and min(word_length, 7)
+        2. Handle contractions by splitting on apostrophe into parts
+        3. Remove trailing silent 'e' from each part (except final 'le')
+        4. Count contiguous vowel groups in each part
+        5. Clamp between 1 and min(word_length, 7)
 
     This is a heuristic with ~85% accuracy vs dictionary lookup.
     It is independent of textstat's implementation which uses CMU dict + Pyphen.
 
     Accuracy limitations:
-        - Handles common contractions poorly (isn't → counted as 2 instead of 1-2)
-        - Y as vowel at start/special positions not perfectly handled
-        - Silent 'le' endings handled but complex consonant clusters approximated
+        - Complex consonant clusters approximated
+        - Y as vowel at special positions not perfectly handled
+        - Silent 'le' endings handled but edge cases exist
 
     For clarity-score purposes, relative ordering matters more than
     absolute accuracy — we care whether this sentence is harder to read
@@ -117,27 +122,37 @@ def count_syllables(word: str) -> int:
 
     vowels = set('aeiouy')
 
-    # Remove trailing silent 'e' (not in 'le' endings)
-    if len(word) >= 2 and word[-1] == 'e' and word[-2] != 'l':
-        word = word[:-1]
+    # Handle contractions: split on apostrophe and process each part
+    parts = word.split("'")
+    total = 0
+    for i, part in enumerate(parts):
+        if not part:
+            continue
+        w = part
+        # Remove trailing silent 'e' (not in 'le' endings)
+        if len(w) >= 2 and w[-1] == 'e' and w[-2] != 'l':
+            w = w[:-1]
+        # Count vowel groups in this part
+        count = 0
+        prev_is_vowel = False
+        for char in w:
+            is_vowel = char in vowels
+            if is_vowel and not prev_is_vowel:
+                count += 1
+            prev_is_vowel = is_vowel
+        # Contraction suffix heuristic: short parts after apostrophe (like 't, 're, 've) count as syllables
+        if i > 0 and len(part) <= 2 and count == 0:
+            count = 1
+        total += count
 
-    # Count vowel groups
-    count = 0
-    prev_is_vowel = False
-    for char in word:
-        is_vowel = char in vowels
-        if is_vowel and not prev_is_vowel:
-            count += 1
-        prev_is_vowel = is_vowel
+    if total == 0:
+        # Fallback: check original for any vowel
+        if any(c in vowels for c in word):
+            return 1
+        return 0
 
-    # Clamp between 1 and min(word_length, 7)
-    count = max(1, min(count, len(word), 7))
-
-    # Guard: words with zero vowel groups (shouldn't happen but be safe)
-    if count == 0 and any(c in vowels for c in word):
-        count = 1
-
-    return count
+    # Clamp between 1 and min(total_possible, 7)
+    return max(1, min(total, len(word), 7))
 
 
 def count_syllables_in_text(text: str) -> int:
