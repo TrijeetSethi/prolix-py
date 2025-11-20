@@ -1,0 +1,502 @@
+"""High-level entry point for clarity scoring of skills, documents, and batches.
+
+This module provides a unified ``clarify()`` function that accepts three
+input modes:
+
+1. **Single file** – ``clarify("skills/brand/SKILL.md")`` → ``AnalysisResult``
+2. **Directory scan** – ``clarify("skills/")`` → ``list[tuple[Path, AnalysisResult]]``
+3. **Batch JSONL** – ``clarify("batch.jsonl")`` → ``dict[str, AnalysisResult]``
+
+All three modes funnel through the same internal ``analyze()`` pipeline so
+the scoring logic is identical regardless of input shape.
+
+Optional YAML frontmatter (``---`` blocks at the top of SKILL.md files) is
+automatically stripped before scoring so only the actual skill instructions
+are analysed.
+
+Usage examples::
+
+    # Single file
+    from clarity_score.clarify import clarify
+    result = clarify("skills/foo/SKILL.md")
+    print(result.clarity_score)
+
+    # Directory scan (recursive, finds all .md files or SKILL.md)
+    results = clarify("skills/")
+    for path, res in sorted(results):
+        print(f"{path}: {res.clarity_score:.1f}")
+
+    # Batch JSONL — one JSON object per line with "path" and optional "content" keys
+    results = clarify("batch.jsonl")
+
+See ../../tools/PLAN_CLARIFY_WORKFLOW.md for the full design.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+from typing import Any
+
+from .scoring import AnalysisResult, analyze
+
+
+# ---------------------------------------------------------------------------
+# File discovery helpers
+# ---------------------------------------------------------------------------
+
+
+def _strip_frontmatter(text: str) -> str:
+    """Strip YAML frontmatter (--- ... ---) from the beginning of *text*.
+
+    SKILL.md files often start with a metadata block::
+
+        ---
+        name: my-skill
+        description: Does stuff
+        license: MIT
+        ---
+
+        Actual skill content ...
+
+    This function returns everything after the closing ``---`` (whitespace
+    trimmed).  If no frontmatter is detected the text is returned verbatim.
+
+    Handles both single-line and multiline description blocks::
+
+        description: |-
+            multi-
+            line text
+    """
+    stripped = text.lstrip()
+
+    # Must start with --- on its own line
+    if not stripped.startswith("---"):
+        return text
+
+    # Find the closing --- (may be preceded/followed by whitespace only)
+    pos = 3  # skip opening ---
+    while True:
+        next_dash = stripped.find("---", pos)
+        if next_dash == -1:
+            return text  # no closing delimiter found — treat as regular text
+
+        after = next_dash + 3
+        rest = stripped[after:]
+
+        # Closing delimiter must be on its own line (start of line or after newline+whitespace)
+        if not rest or rest[0] == "\n" or rest.strip() == "":
+            # Check the lines before are valid frontmatter content
+            return stripped[after:].lstrip()
+
+        pos = next_dash + 3
+
+    return text
+
+
+def _discover_single_file(path: Path) -> list[Path]:
+    """Return ``[path]`` if it exists and is a file; raise ``FileNotFoundError``."""
+    if not path.is_file():
+        raise FileNotFoundError(f"Not a file: {path}")
+    return [path]
+
+
+def _discover_directory(path: Path, pattern: str = "**/*.md") -> list[Path]:
+    """Recursively find .md files under *path*.
+
+    Args:
+        path: Directory to scan.
+        pattern: Glob pattern (default ``**/*.md`` finds all markdown files).
+
+    Returns:
+        Sorted list of discovered file paths.
+    """
+    if not path.is_dir():
+        raise NotADirectoryError(f"Not a directory: {path}")
+
+    files = sorted(path.glob(pattern))
+    # Filter to only regular files (not directories that glob might return)
+    return [f for f in files if f.is_file()]
+
+
+def _discover_batch_jsonl(path: Path) -> list[dict[str, Any]]:
+    """Parse a JSONL file where each line is ``{"path": "...", "content": "..."}``.
+
+    Supported line shapes:
+        {"path": "skills/foo/SKILL.md"}
+            → read the content from disk at runtime
+        {"path": "skills/foo/SKILL.md", "content": "# My skill ..."}
+            → use inline content directly (avoids extra disk I/O)
+        {"path": "skills/foo/SKILL.md", "name": "foo-bar"}
+            → only path is used; name is metadata only
+
+    Returns:
+        List of dicts with at least a ``"path"`` key.
+    """
+    entries: list[dict[str, Any]] = []
+    lines = path.read_text().splitlines()
+    for line_no, line in enumerate(lines, 1):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue  # skip blanks and comment lines
+
+        try:
+            entry = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ValueError(
+                f"Invalid JSON on line {line_no} in {path}: {exc}"
+            ) from exc
+
+        # Entry may have inline "content" (no file path needed) OR reference a file via "path"
+        if "path" not in entry and "content" not in entry:
+            raise ValueError(
+                f'Line {line_no} needs either "path" or "content" key in {path}'
+            )
+        entries.append(entry)
+    return entries
+
+
+# ---------------------------------------------------------------------------
+# Content reading
+# ---------------------------------------------------------------------------
+
+
+def _read_content(path: Path) -> str:
+    """Read a file and strip any YAML frontmatter."""
+    text = path.read_text(encoding="utf-8")
+    return _strip_frontmatter(text)
+
+
+# ---------------------------------------------------------------------------
+# Core scoring loop
+# ---------------------------------------------------------------------------
+
+
+def _score_file(
+    path: Path,
+    content: str | None = None,
+    *,
+    include_readability: bool = True,
+    coherence_scorer: Any | None = None,
+) -> AnalysisResult:
+    """Score a single file's content using ``analyze()``.
+
+    Args:
+        path: File path (used for reporting only; the actual content comes from *content* or disk).
+        content: Pre-read content string. If ``None``, reads from disk.
+        include_readability: Whether to compute readability metrics (default True).
+        coherence_scorer: Optional embedding-based coherence scorer.
+
+    Returns:
+        An ``AnalysisResult`` for the file's content.
+    """
+    text = content if content is not None else _read_content(path)
+
+    return analyze(
+        text,
+        include_readability=include_readability,
+        coherence_scorer=coherence_scorer,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Public API: clarify()
+# ---------------------------------------------------------------------------
+
+
+def clarify(
+    path: str | Path,
+    *,
+    include_readability: bool = True,
+    coherence_scorer: Any | None = None,
+    pattern: str = "**/*.md",
+    fmt: str = "auto",
+) -> AnalysisResult | dict[str, AnalysisResult] | list[tuple[Path, AnalysisResult]]:
+    """Score a single file, batch JSONL, or directory recursively.
+
+    This is the main entry point for clarity scoring of skill documents.
+    It automatically detects the input type and returns the appropriate
+    structure.
+
+    Args:
+        path: One of:
+            * Single ``.md`` file path (e.g. ``"skills/foo/SKILL.md"``)
+            * Directory to scan recursively (e.g. ``"skills/"``)
+            * JSONL batch file with ``{"path": "..."}`` entries
+        include_readability: Include readability metrics in results (default True).
+        coherence_scorer: Optional embedding-based coherence scorer. If provided,
+            each result will include ``context_coherence``.
+        pattern: Glob pattern for directory scanning (default ``**/*.md``).
+            Set to ``"*/SKILL.md"`` to only find SKILL.md files.
+        fmt: Output format hint — currently unused (auto-detection always applies).
+
+    Returns:
+        - Single file: ``AnalysisResult``
+        - Directory scan: ``list[tuple[Path, AnalysisResult]]`` sorted by path
+        - Batch JSONL: ``dict[str, AnalysisResult]`` keyed on ``"name"`` or ``"path"`` stem
+
+    Raises:
+        FileNotFoundError: When the single-file path does not exist.
+        NotADirectoryError: When the directory path is not a directory.
+        ValueError: When JSONL lines are malformed or missing ``"path"`` key.
+        OSError: On read errors (permissions, encoding issues).
+
+    Examples::
+
+        # Single file
+        result = clarify("skills/brand/SKILL.md")
+        print(result.clarity_score)  # → 42.3
+
+        # Directory scan — find all SKILL.md files recursively
+        results = clarify("skills/", pattern="*/SKILL.md")
+        for path, res in results:
+            print(f"{path.name}: {res.clarity_score:.1f}")
+
+        # Batch JSONL
+        results = clarify("batch.jsonl")
+    """
+    path = Path(path)
+
+    if fmt != "auto":
+        import warnings
+        warnings.warn(
+            "The 'fmt' parameter is not yet fully supported; auto-detection always applies.",
+            UserWarning,
+            stacklevel=2,
+        )
+
+    # Detect input type and dispatch
+    if path.is_file():
+        # Check if it looks like a JSONL file
+        if path.suffix == ".jsonl" or path.suffix == ".json":
+            return _score_batch(path, include_readability, coherence_scorer)
+        else:
+            result = _score_file(
+                path, content=None,
+                include_readability=include_readability,
+                coherence_scorer=coherence_scorer,
+            )
+            # Wrap in dict for consistency — key is the stem (file name without ext)
+            return result
+
+    elif path.is_dir():
+        return _score_directory(
+            path, pattern, include_readability, coherence_scorer,
+        )
+
+    else:
+        raise FileNotFoundError(f"Path does not exist: {path}")
+
+
+# ---------------------------------------------------------------------------
+# Mode implementations
+# ---------------------------------------------------------------------------
+
+
+def _score_single(
+    file_path: Path,
+    include_readability: bool,
+    coherence_scorer: Any | None,
+) -> tuple[Path, AnalysisResult]:
+    """Score one file and return (path, result)."""
+    try:
+        text = _read_content(file_path) if coherence_scorer is None else None
+        result = analyze(
+            text if text is not None else _read_content(file_path),
+            include_readability=include_readability,
+            coherence_scorer=coherence_scorer,
+        )
+    except Exception as exc:
+        # Gracefully degrade: return a minimal result with an error flag
+        from .scoring import ScoreWeights
+        from .lexical import LexicalReport
+        from .syntax import SyntaxReport
+
+        result = AnalysisResult(
+            sentence=str(file_path),
+            clarity_score=0.0,
+            semantic_ambiguity=0.0,
+            specificity=0.0,
+            syntax=SyntaxReport(),
+            lexical=LexicalReport(),
+            weights=ScoreWeights(),
+        )
+
+    return (file_path, result)
+
+
+def _score_file(
+    path: Path,
+    content: str | None = None,
+    *,
+    include_readability: bool = True,
+    coherence_scorer: Any | None = None,
+) -> AnalysisResult:
+    """Score a single file's content using ``analyze()``."""
+    text = content if content is not None else _read_content(path)
+
+    return analyze(
+        text,
+        include_readability=include_readability,
+        coherence_scorer=coherence_scorer,
+    )
+
+
+def _score_directory(
+    dir_path: Path,
+    pattern: str,
+    include_readability: bool,
+    coherence_scorer: Any | None,
+) -> list[tuple[Path, AnalysisResult]]:
+    """Score all files matching *pattern* in *dir_path*.
+
+    Returns a sorted list of ``(Path, AnalysisResult)`` tuples.
+    Files that fail to parse produce a minimal zero-score result with a
+    warning written to stderr (non-fatal).
+    """
+    discovered = _discover_directory(dir_path, pattern)
+
+    results: list[tuple[Path, AnalysisResult]] = []
+    for file_path in discovered:
+        try:
+            text = _read_content(file_path)
+            result = analyze(
+                text,
+                include_readability=include_readability,
+                coherence_scorer=coherence_scorer,
+            )
+            results.append((file_path, result))
+        except Exception as exc:
+            import sys
+            print(
+                f"Warning: failed to score {file_path}: {exc}",
+                file=sys.stderr,
+            )
+
+    # Sort by resolved path for deterministic ordering
+    results.sort(key=lambda x: x[0])
+    return results
+
+
+def _score_batch(
+    batch_path: Path,
+    include_readability: bool,
+    coherence_scorer: Any | None,
+) -> dict[str, AnalysisResult]:
+    """Score entries from a JSONL batch file.
+
+    Each line is a JSON object with at least a ``"path"`` key.
+    If the line also has a ``"content"`` key, that string is used directly
+    instead of reading from disk.
+
+    Returns:
+        Dict keyed on ``"name"`` if present, otherwise the stem of ``"path"``,
+        mapping to the ``AnalysisResult``.
+    """
+    entries = _discover_batch_jsonl(batch_path)
+
+    results: dict[str, AnalysisResult] = {}
+    for entry in entries:
+        entry_path = Path(entry.get("path", ""))
+        content_inline = entry.get("content")
+
+        # Key is "name" if present, otherwise file stem (or entry index)
+        key = entry.get("name") or (entry_path.stem if entry_path.name else f"entry_{len(results)}")
+
+        try:
+            if content_inline:
+                # Inline content — no file reading needed
+                result = analyze(
+                    content_inline,
+                    include_readability=include_readability,
+                    coherence_scorer=coherence_scorer,
+                )
+            elif entry_path.is_file():
+                result = _score_file(
+                    entry_path, 
+                    include_readability=include_readability,
+                    coherence_scorer=coherence_scorer,
+                )
+            else:
+                # content is required if file path doesn't exist
+                raise ValueError(f'Batch entry has no "content" and file not found: {entry_path}')
+
+            results[key] = result
+        except Exception as exc:
+            import sys
+            print(
+                f"Warning: failed to score batch entry {entry_path}: {exc}",
+                file=sys.stderr,
+            )
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Convenience: one-line model comparison helper
+# ---------------------------------------------------------------------------
+
+
+def compare_models(
+    model_names: list[str],
+    path: str | Path,
+    *,
+    pattern: str = "**/*.md",
+    include_readability: bool = True,
+) -> dict[str, list[tuple[Path, AnalysisResult]]]:
+    """Score all files with multiple coherence models for benchmarking.
+
+    Convenience function that runs ``clarify()`` once per model and returns
+    results grouped by model name.  The first model in the list is scored
+    without any coherence scorer (baseline), then subsequent models each
+    load their embedding model.
+
+    Args:
+        model_names: HuggingFace model names to compare
+            (e.g. ``["all-MiniLM-L6-v2", "all-mpnet-base-v2"]``).
+        path: File, directory, or JSONL batch to score.
+        pattern: Glob pattern for directory scanning.
+        include_readability: Include readability metrics (default True).
+
+    Returns:
+        Dict mapping model name → list of ``(Path, AnalysisResult)`` tuples.
+        When ``len(model_names) == 1``, the key is ``"<baseline>"``.
+
+    Raises:
+        ImportError: If any embedding model fails to load and is not the first (baseline).
+    """
+    from pathlib import Path as _Path
+
+    all_results: dict[str, list[tuple[Path, AnalysisResult]]] = {}
+
+    for idx, model_name in enumerate(model_names):
+        # Load coherence scorer (skip for baseline / first model)
+        coherence_scorer = None
+        if idx > 0:
+            from .semantic_coherence import MiniLMCoherenceScorer
+            coherence_scorer = MiniLMCoherenceScorer(model_name)
+
+        input_path = _Path(path)
+        mode_results: list[tuple[Path, AnalysisResult]] = []
+
+        if input_path.is_file() and input_path.suffix == ".jsonl":
+            # Batch JSONL — return as dict values converted to list
+            batch = _score_batch(input_path, include_readability, coherence_scorer)
+            mode_results = [(Path(k), v) for k, v in sorted(batch.items())]
+        elif input_path.is_dir():
+            mode_results = _score_directory(
+                input_path, pattern, include_readability, coherence_scorer,
+            )
+        else:
+            # Single file — wrap in list
+            result = analyze(
+                _read_content(input_path),
+                include_readability=include_readability,
+                coherence_scorer=coherence_scorer,
+            )
+            mode_results = [(input_path, result)]
+
+        all_results[model_name] = mode_results
+
+    return all_results

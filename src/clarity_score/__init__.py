@@ -11,6 +11,7 @@ from .scorer import SemanticScorer, WordnetPolysemyScorer
 from .scoring import AnalysisResult, ScoreWeights, analyze
 from .syntax import AmbiguityHit, SyntaxReport, analyze_syntax, tag_sentence
 from .vague_lexicon import VagueHit, find_vague_hits
+from .clarify import clarify
 
 __all__ = [
     "AmbiguityHit",
