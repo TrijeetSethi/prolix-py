@@ -6,6 +6,7 @@ frozen 2006 Princeton WordNet snapshot.
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 
@@ -14,6 +15,42 @@ from wn.morphy import Morphy
 
 _LEXICON = "oewn:2025"
 _wordnet: wn.Wordnet | None = None
+
+# Simple LRU cache (max 10K entries) to avoid repeated WordNet lookups
+# for the same word across multiple analyze() calls.
+class _WordCache:
+    """Simple LRU cache mapping word -> WordLexicalInfo."""
+    def __init__(self, maxsize: int = 10_000):
+        self._cache: OrderedDict[str, WordLexicalInfo] = OrderedDict()
+        self._maxsize = maxsize
+
+    def get(self, key: str) -> WordLexicalInfo | None:
+        try:
+            value = self._cache.pop(key)
+            # Put at end (most recently used)
+            self._cache[key] = value
+            return value
+        except KeyError:
+            return None
+
+    def put(self, key: str, value: WordLexicalInfo) -> None:
+        try:
+            self._cache.pop(key)
+        except KeyError:
+            pass
+        self._cache[key] = value
+        # Evict oldest if over capacity
+        while len(self._cache) > self._maxsize:
+            self._cache.popitem(last=False)
+
+_word_cache: _WordCache | None = None
+
+
+def _get_or_create_cache() -> _WordCache:
+    global _word_cache
+    if _word_cache is None:
+        _word_cache = _WordCache()
+    return _word_cache
 
 # Fallback for words with no WordNet entry at all (proper nouns, typos,
 # etc.) -- same default starter.md used: `1, 3` (one sense, a shallow
@@ -55,19 +92,30 @@ class LexicalReport:
 
 
 def lookup_word(word: str) -> WordLexicalInfo:
+    """Look up a word in WordNet, using an LRU cache to avoid repeated queries."""
+    # Check cache first
+    cache = _get_or_create_cache()
+    cached = cache.get(word)
+    if cached is not None:
+        return cached
+
     synsets = _get_wordnet().synsets(word.lower())
     if not synsets:
-        return WordLexicalInfo(
+        result = WordLexicalInfo(
             word=word,
             sense_count=_FALLBACK_SENSE_COUNT,
             avg_max_depth=_FALLBACK_MAX_DEPTH,
         )
-    depths = [s.max_depth() for s in synsets]
-    return WordLexicalInfo(
-        word=word,
-        sense_count=len(synsets),
-        avg_max_depth=sum(depths) / len(depths),
-    )
+    else:
+        depths = [s.max_depth() for s in synsets]
+        result = WordLexicalInfo(
+            word=word,
+            sense_count=len(synsets),
+            avg_max_depth=sum(depths) / len(depths),
+        )
+
+    cache.put(word, result)
+    return result
 
 
 def analyze_lexical(words: Iterable[str]) -> LexicalReport:

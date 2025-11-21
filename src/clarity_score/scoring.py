@@ -37,18 +37,21 @@ class ScoreWeights:
     """Mirrors starter.md's `0.4 * semantic + 0.4 * vagueness + 0.2 * syntax`
     blend. Extended in Phase B to support optional readability and coherence.
 
-    When both new signals are enabled, weights redistribute so that all
-    five signals sum to 1.0 total weight. When only some are enabled,
+    When all signals are enabled, weights redistribute so that all
+    six signals sum to 1.0 total weight. When only some are enabled,
     remaining ones absorb the unallocated proportionally.
 
     Default (backward-compatible): semantic=0.4, vagueness=0.4, syntax=0.2
     """
 
-    semantic: float = 0.4
-    vagueness: float = 0.4
-    syntax: float = 0.2
-    readability: float = 0.0  # NEW — non-zero when feature enabled
-    coherence: float = 0.0     # NEW — non-zero when feature enabled
+    semantic: float = 0.24
+    vagueness: float = 0.24
+    syntax: float = 0.12
+    readability: float = 0.0   # optional — set to non-zero to enable
+    coherence: float = 0.0     # optional — set to non-zero to enable
+    structure: float = 0.20    # structural clarity (always available)
+    # Note: when readability and coherence are also enabled, structure=0.175 etc.
+    # Weight redistribution handles normalization automatically.
 
     def non_zero_weight_sum(self) -> float:
         """Sum of all weights that are > 0 (for weight redistribution)."""
@@ -69,6 +72,7 @@ class AnalysisResult:
     # NEW optional fields — None when features not enabled/available
     readability_score: Optional[float] = None
     context_coherence: Optional[float] = None
+    structural_clarity: Optional[float] = None
 
     def to_json(self) -> dict:
         data = {
@@ -90,6 +94,8 @@ class AnalysisResult:
             data["readability_score"] = round(self.readability_score, 2)
         if self.context_coherence is not None:
             data["context_coherence"] = round(self.context_coherence, 2)
+        if self.structural_clarity is not None:
+            data["structural_clarity"] = round(self.structural_clarity, 2)
         return data
 
 
@@ -144,6 +150,9 @@ def analyze(
 
     if not words:
         empty_lexical = LexicalReport()
+        # Compute structural clarity even for empty text (may have structure)
+        from .structure import analyze_structure as _analyze_structure
+        structure_report = _analyze_structure(sentence)
         return AnalysisResult(
             sentence=sentence,
             clarity_score=0.0,
@@ -151,6 +160,7 @@ def analyze(
             specificity=0.0,
             readability_score=readability_score,
             context_coherence=context_coherence,
+            structural_clarity=structure_report.structural_clarity,
             syntax=syntax_report,
             lexical=empty_lexical,
             vague_hits=vague_hits,
@@ -158,6 +168,11 @@ def analyze(
         )
 
     semantic_ambiguity = semantic_scorer.score(sentence, words)
+
+    # Compute structural clarity (always available — no feature check needed)
+    from .structure import analyze_structure as _analyze_structure
+    structure_report = _analyze_structure(sentence)
+    structural_clarity = structure_report.structural_clarity
 
     # Normalize vague penalty: cap it so it doesn't overwhelm the base specificity.
     # Use unique hit phrases to avoid double-counting repeated vague words,
@@ -184,6 +199,7 @@ def analyze(
         syntax_penalty=syntax_penalty,
         readability_score=readability_score,
         coherence_score=context_coherence,
+        structural_clarity=structural_clarity,
         weights=weights,
     )
 
@@ -197,6 +213,7 @@ def analyze(
         specificity=specificity,
         readability_score=readability_score,
         context_coherence=context_coherence,
+        structural_clarity=structural_clarity,
         syntax=syntax_report,
         lexical=lexical_report,
         vague_hits=vague_hits,
@@ -210,6 +227,7 @@ def _compute_weighted_ambiguity(
     syntax_penalty: float,
     readability_score: Optional[float],
     coherence_score: Optional[float],
+    structural_clarity: Optional[float],
     weights: ScoreWeights,
 ) -> float:
     """Compute weighted ambiguity score with automatic weight redistribution.
@@ -217,13 +235,14 @@ def _compute_weighted_ambiguity(
     When some signals are absent (None or 0 weight), remaining signals absorb
     their weight proportionally so the formula always sums to a valid score.
 
-    Note: readability_score and coherence_score are already on 0-100 clarity scale
-    where higher = better. Vagueness, syntax_penalty, and semantic_ambiguity are
-    on 0-100 ambiguity scale where higher = worse.
+    Note: readability_score, coherence_score, and structural_clarity are already
+    on 0-100 clarity scale where higher = better. Vagueness, syntax_penalty,
+    and semantic_ambiguity are on 0-100 ambiguity scale where higher = worse.
 
-    For the formula, we invert readability and coherence to the ambiguity scale:
+    For the formula, we invert clarity signals to the ambiguity scale:
         ambiguity_from_readability = 100 - readability_score
         ambiguity_from_coherence = 100 - coherence_score
+        ambiguity_from_structure = 100 - structural_clarity
     """
     # Build list of (ambiguity_value, weight) for enabled signals
     total_weight = 0.0
@@ -238,6 +257,8 @@ def _compute_weighted_ambiguity(
         total_weight += weights.readability
     if coherence_score is not None and weights.coherence > 0:
         total_weight += weights.coherence
+    if structural_clarity is not None and weights.structure > 0:
+        total_weight += weights.structure
 
     if total_weight == 0:
         # Fallback: unweighted average of available signals
@@ -246,6 +267,8 @@ def _compute_weighted_ambiguity(
             values.append(100.0 - readability_score)
         if coherence_score is not None:
             values.append(100.0 - coherence_score)
+        if structural_clarity is not None:
+            values.append(100.0 - structural_clarity)
         return max(0.0, min(sum(values) / max(len(values), 1), 100.0))
 
     weighted_sum = (
@@ -261,5 +284,9 @@ def _compute_weighted_ambiguity(
     if coherence_score is not None and weights.coherence > 0:
         # Invert: high coherence -> low ambiguity contribution
         weighted_sum += (100.0 - coherence_score) * weights.coherence
+
+    if structural_clarity is not None and weights.structure > 0:
+        # Invert: high structural clarity -> low ambiguity contribution
+        weighted_sum += (100.0 - structural_clarity) * weights.structure
 
     return weighted_sum / total_weight
