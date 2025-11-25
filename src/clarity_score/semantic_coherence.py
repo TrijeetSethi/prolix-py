@@ -121,14 +121,21 @@ class MiniLMCoherenceScorer:
         self._model = SentenceTransformer(model_name)
         self._model.eval()  # disable dropout, use deterministic embeddings
 
-    def score(self, sentence: str, tokens: Sequence[tuple[str, str]]) -> float:
+    # Maximum content words to embed per call for performance.
+    # Empirically ~50 words balances quality vs speed even for MPNet (~4s/doc).
+    _MAX_WORDS_PER_ENCODE = 50
+
+    def score(self, sentence: str, tokens: Sequence[tuple[str, str]], *, sample_max_words: int | None = None) -> float:
         """Compute contextual coherence for a sentence.
 
         Algorithm:
             1. Extract content words from POS-tagged tokens
-            2. Generate per-word embeddings via MiniLM-L6-v2
+            2. Generate per-word embeddings via the embedding model (batched)
             3. Compute mean pairwise cosine similarity among content words
             4. Map average similarity [-1, 1] to coherence score [10, 100]
+
+        For performance, content words exceeding ``sample_max_words`` (default 50)
+        are uniformly sampled to avoid excessive encoding time with larger models.
 
         Returns:
             Coherence score on 0-100 scale. Higher = more coherent.
@@ -139,6 +146,7 @@ class MiniLMCoherenceScorer:
         Args:
             sentence: Original sentence text (for logging/debugging)
             tokens: POS-tagged token list from tag_sentence()
+            sample_max_words: Max content words to encode per call. Defaults to 50.
 
         Raises:
             ImportError: If the embedding model cannot be loaded (feature not installed)
@@ -148,6 +156,12 @@ class MiniLMCoherenceScorer:
 
         if len(content_words) < 2:
             return 100.0  # Trivially coherent: single or zero content words
+
+        max_words = sample_max_words or self._MAX_WORDS_PER_ENCODE
+        if len(content_words) > max_words:
+            # Sample uniformly to keep encoding time manageable
+            step = len(content_words) / max_words
+            content_words = [content_words[int(i * step)] for i in range(max_words)]
 
         # Get embeddings (batched for efficiency)
         embeddings = self._model.encode(
