@@ -38,7 +38,9 @@ semantic-coherence = [
 all = ["clarity-score[dev,readability,semantic-coherence]"]
 
 [project.scripts]
-clarity-score = "clarity_score.cli:main"
+clarity-score = "clarity_score.cli:_entry_single"
+clarity-score-dir = "clarity_score.cli:_entry_dir"
+clarity-score-compare = "clarity_score.cli:_entry_compare"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/clarity_score"]
