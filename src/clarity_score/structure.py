@@ -229,3 +229,8 @@ def analyze_structure(text: str) -> StructureReport:
         max_heading_depth=max_depth,
         structural_clarity=round(structural_clarity, 2),
     )
+
+__all__ = [
+    "StructureReport",
+    "analyze_structure",
+]

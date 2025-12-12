@@ -37,9 +37,17 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .scorer import CoherenceScorer
 
 from .scoring import AnalysisResult, analyze
+
+__all__ = [
+    "clarify",
+    "compare_models",
+]
 
 
 # ---------------------------------------------------------------------------
@@ -178,7 +186,7 @@ def _score_file(
     content: str | None = None,
     *,
     include_readability: bool = True,
-    coherence_scorer: Any | None = None,
+    coherence_scorer: "CoherenceScorer | None" = None,
 ) -> AnalysisResult:
     """Score a single file's content using ``analyze()``.
 
@@ -209,7 +217,7 @@ def clarify(
     path: str | Path,
     *,
     include_readability: bool = True,
-    coherence_scorer: Any | None = None,
+    coherence_scorer: "CoherenceScorer | None" = None,
     pattern: str = "**/*.md",
     fmt: str = "auto",
 ) -> AnalysisResult | dict[str, AnalysisResult] | list[tuple[Path, AnalysisResult]]:
@@ -294,60 +302,11 @@ def clarify(
 # ---------------------------------------------------------------------------
 
 
-def _score_single(
-    file_path: Path,
-    include_readability: bool,
-    coherence_scorer: Any | None,
-) -> tuple[Path, AnalysisResult]:
-    """Score one file and return (path, result)."""
-    try:
-        text = _read_content(file_path) if coherence_scorer is None else None
-        result = analyze(
-            text if text is not None else _read_content(file_path),
-            include_readability=include_readability,
-            coherence_scorer=coherence_scorer,
-        )
-    except Exception as exc:
-        # Gracefully degrade: return a minimal result with an error flag
-        from .scoring import ScoreWeights
-        from .lexical import LexicalReport
-        from .syntax import SyntaxReport
-
-        result = AnalysisResult(
-            sentence=str(file_path),
-            clarity_score=0.0,
-            semantic_ambiguity=0.0,
-            specificity=0.0,
-            syntax=SyntaxReport(),
-            lexical=LexicalReport(),
-            weights=ScoreWeights(),
-        )
-
-    return (file_path, result)
-
-
-def _score_file(
-    path: Path,
-    content: str | None = None,
-    *,
-    include_readability: bool = True,
-    coherence_scorer: Any | None = None,
-) -> AnalysisResult:
-    """Score a single file's content using ``analyze()``."""
-    text = content if content is not None else _read_content(path)
-
-    return analyze(
-        text,
-        include_readability=include_readability,
-        coherence_scorer=coherence_scorer,
-    )
-
-
 def _score_directory(
     dir_path: Path,
     pattern: str,
     include_readability: bool,
-    coherence_scorer: Any | None,
+    coherence_scorer: "CoherenceScorer | None",
 ) -> list[tuple[Path, AnalysisResult]]:
     """Score all files matching *pattern* in *dir_path*.
 
@@ -382,7 +341,7 @@ def _score_directory(
 def _score_batch(
     batch_path: Path,
     include_readability: bool,
-    coherence_scorer: Any | None,
+    coherence_scorer: "CoherenceScorer | None",
 ) -> dict[str, AnalysisResult]:
     """Score entries from a JSONL batch file.
 

@@ -68,3 +68,8 @@ def find_vague_hits(
         else:
             i += 1
     return hits
+
+__all__ = [
+    "VagueHit",
+    "find_vague_hits",
+]

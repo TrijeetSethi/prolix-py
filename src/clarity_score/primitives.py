@@ -315,3 +315,18 @@ def load_primitives(path: Path) -> list[dict]:
             row["primitives"] = ClarityPrimitives(**prims)
         rows.append(row)
     return rows
+
+__all__ = [
+    "ClarityPrimitives",
+    "FormulaWeights",
+    "DEFAULT_WEIGHTS",
+    "READABILITY_ENABLED_WEIGHTS",
+    "NO_STRUCTURE_WEIGHTS",
+    "VAGUENESS_HEAVY_WEIGHTS",
+    "EVEN_DISTRIBUTION_WEIGHTS",
+    "apply_all_formulas",
+    "apply_formula",
+    "extract_primitives",
+    "load_primitives",
+    "save_primitives",
+]

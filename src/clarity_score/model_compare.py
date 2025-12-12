@@ -499,3 +499,12 @@ def generate_recommendation(metrics_list: list[ComparisonMetrics]) -> str:
         )
 
     return " | ".join(recommendations)
+
+__all__ = [
+    "BenchmarkResult",
+    "ComparisonMetrics",
+    "ModelTiming",
+    "ScorePair",
+    "compare_models_benchmark",
+    "generate_recommendation",
+]

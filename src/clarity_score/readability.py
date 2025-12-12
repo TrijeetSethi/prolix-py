@@ -258,3 +258,9 @@ def text_to_clarity_score(text: str) -> float:
     """Compute a clarity-aligned readability score for text (convenience wrapper)."""
     metrics = compute_readability_metrics(text)
     return metrics.to_clarity_score()
+
+__all__ = [
+    "ReadabilityMetrics",
+    "compute_readability_metrics",
+    "text_to_clarity_score",
+]

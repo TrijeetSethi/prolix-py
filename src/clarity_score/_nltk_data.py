@@ -27,3 +27,5 @@ def ensure_nltk_data() -> None:
         except LookupError:
             nltk.download(package, quiet=True)
     _ensured = True
+
+__all__ = ["ensure_nltk_data"]

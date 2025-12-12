@@ -1,15 +1,29 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.25"]
 build-backend = "hatchling.build"
 
 [project]
 name = "clarity-score"
-version = "0.1.0"
+version = "0.2.0"
 description = "Scores a sentence's clarity via syntactic-ambiguity, WordNet-based specificity, and vague-word heuristics"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 requires-python = ">=3.10"
-authors = [{ name = "the clarity-score authors" }]
+authors = [{ name = "the clarity-score authors", email = "developers@vague.io" }]
+keywords = ["clarity", "sentences", "natural-language", "wordnet", "linguistics"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Text Processing :: Linguistic",
+]
 dependencies = [
     "nltk>=3.9",
     "wn>=1.0",
@@ -19,12 +33,6 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "ruff>=0.6",
-]
-# Placeholder for the future transformer-based SemanticScorer described in
-# ../ARCHITECTURE.md — not implemented yet, never a default dependency.
-transformer = [
-    "transformers>=4.40",
-    "torch>=2.2",
 ]
 # Readability metrics (Flesch-Kincaid, Gunning Fog, SMOG, etc.)
 # Zero additional dependencies — pure Python math on top of stdlib.
@@ -37,13 +45,27 @@ semantic-coherence = [
 # Convenience extra that enables everything
 all = ["clarity-score[dev,readability,semantic-coherence]"]
 
+[project.urls]
+Homepage = "https://github.com/treejay/vague"
+Repository = "https://github.com/treejay/vague"
+Documentation = "https://github.com/treejay/vague/blob/main/python/README.md"
+Changelog = "https://github.com/treejay/vague/blob/main/python/CHANGELOG.md"
+
 [project.scripts]
-clarity-score = "clarity_score.cli:_entry_single"
-clarity-score-dir = "clarity_score.cli:_entry_dir"
-clarity-score-compare = "clarity_score.cli:_entry_compare"
+clarity-score = "clarity_score.cli:entry_single"
+clarity-score-dir = "clarity_score.cli:entry_dir"
+clarity-score-compare = "clarity_score.cli:entry_compare"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/clarity_score"]
+include = [
+    "LICENSE-MIT",
+    "LICENSE-APACHE-2.0",
+]
+
+[tool.hatch.build.targets.wheel.package-data]
+"clarity_score" = ["data/*.txt", "py.typed"]
 
 [tool.ruff]
 line-length = 100
+target-version = "py310"

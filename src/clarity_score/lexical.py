@@ -120,3 +120,10 @@ def lookup_word(word: str) -> WordLexicalInfo:
 
 def analyze_lexical(words: Iterable[str]) -> LexicalReport:
     return LexicalReport(words=[lookup_word(w) for w in words if w.isalpha()])
+
+__all__ = [
+    "LexicalReport",
+    "WordLexicalInfo",
+    "analyze_lexical",
+    "lookup_word",
+]

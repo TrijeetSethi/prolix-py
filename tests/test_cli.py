@@ -13,7 +13,7 @@ import pytest
 src = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(src))
 
-from clarity_score.cli import _entry_dir, _entry_single
+from clarity_score.cli import entry_dir, entry_single
 
 
 # Fixtures are at repo root, not inside python/
@@ -30,11 +30,11 @@ class TestSingleFileCLI:
     """Tests for the `clarity-score "sentence"` usage."""
 
     def test_single_sentence_plain(self):
-        result = _entry_single(["The cat sat on the mat."])
+        result = entry_single(["The cat sat on the mat."])
         assert result == 0
 
     def test_single_sentence_json(self, capsys):
-        result = _entry_single(["The cat sat on the mat.", "--json"])
+        result = entry_single(["The cat sat on the mat.", "--json"])
         assert result == 0
         captured = capsys.readouterr()
         data = json.loads(captured.out)
@@ -43,7 +43,7 @@ class TestSingleFileCLI:
 
     def test_single_file_json(self):
         skill_md = FIXTURE_DIR / "specific_calendar.md"
-        result = _entry_single([str(skill_md), "--json"])
+        result = entry_single([str(skill_md), "--json"])
         assert result == 0
 
 
@@ -57,7 +57,7 @@ class TestDirCLI:
 
     def test_dir_basic(self, capsys):
         """Directory scan prints each file and summary."""
-        result = _entry_dir([str(FIXTURE_DIR), "--pattern", "**/SKILL.md"])
+        result = entry_dir([str(FIXTURE_DIR), "--pattern", "**/SKILL.md"])
         assert result == 0
         captured = capsys.readouterr()
         assert "Found 2" in captured.out  # 2 fixtures
@@ -67,7 +67,7 @@ class TestDirCLI:
     def test_dir_csv_output(self, tmp_path):
         """Directory scan exports to CSV."""
         output = tmp_path / "results.csv"
-        result = _entry_dir([str(FIXTURE_DIR), "--pattern", "**/SKILL.md", "--output", str(output)])
+        result = entry_dir([str(FIXTURE_DIR), "--pattern", "**/SKILL.md", "--output", str(output)])
         assert result == 0
         content = output.read_text()
         assert "clarity_score" in content
@@ -77,7 +77,7 @@ class TestDirCLI:
     def test_dir_json_output(self, tmp_path):
         """Directory scan exports to JSON."""
         output = tmp_path / "results.json"
-        result = _entry_dir([str(FIXTURE_DIR), "--pattern", "**/SKILL.md", "--output", str(output)])
+        result = entry_dir([str(FIXTURE_DIR), "--pattern", "**/SKILL.md", "--output", str(output)])
         assert result == 0
         data = json.loads(output.read_text())
         # JSON export produces a list of row dicts
@@ -89,7 +89,7 @@ class TestDirCLI:
 
     def test_dir_nonexistent(self):
         """Directory scan fails gracefully for non-existent path."""
-        result = _entry_dir(["/nonexistent/path"])
+        result = entry_dir(["/nonexistent/path"])
         assert result == 1
 
 
@@ -142,17 +142,17 @@ class TestJSONOutput:
     """Verify CLI output matches internal dataclass."""
 
     def test_single_json_contains_all_fields(self):
-        result = _entry_single(["The quick brown fox.", "--json"])
+        result = entry_single(["The quick brown fox.", "--json"])
         assert result == 0
         captured = subprocess.run(
             [sys.executable, "-c", f"""
 import json, sys
 sys.path.insert(0, '{src}')
-from clarity_score.cli import _entry_single
+from clarity_score.cli import entry_single
 import io
 old = sys.stdout
 sys.stdout = io.StringIO()
-_entry_single(["The quick brown fox.", "--json"])
+entry_single(["The quick brown fox.", "--json"])
 output = sys.stdout.getvalue()
 sys.stdout = old
 print(json.loads(output)["clarity_score"])

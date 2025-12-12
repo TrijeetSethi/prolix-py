@@ -26,6 +26,8 @@ if TYPE_CHECKING:
     from .scorer import CoherenceScorer  # forward ref — avoid circular import
 
 
+import re
+
 from .lexical import LexicalReport, analyze_lexical
 from .scorer import SemanticScorer, WordnetPolysemyScorer
 from .syntax import SyntaxReport, analyze_syntax, tag_sentence
@@ -106,7 +108,7 @@ def analyze(
     semantic_scorer: SemanticScorer | None = None,
     extra_vague_words: Iterable[str] | None = None,
     include_readability: bool = False,
-    coherence_scorer: "CoherenceScorer | None" = None,
+    coherence_scorer: CoherenceScorer | None = None,
 ) -> AnalysisResult:
     """Analyze a sentence's clarity with optional additional signals.
 
@@ -187,7 +189,6 @@ def analyze(
 
     # Normalize syntax penalty: count hits per sentence so long documents
     # don't get penalized disproportionately. Cap at 10 (a reasonable max).
-    import re
     sentence_count = max(1, len(re.findall(r'[.!?]+', sentence)))
     hit_rate_per_sentence = syntax_report.ambiguity_score / sentence_count
     syntax_penalty = min(hit_rate_per_sentence * 25, 10)
@@ -290,3 +291,9 @@ def _compute_weighted_ambiguity(
         weighted_sum += (100.0 - structural_clarity) * weights.structure
 
     return weighted_sum / total_weight
+
+__all__ = [
+    "AnalysisResult",
+    "ScoreWeights",
+    "analyze",
+]

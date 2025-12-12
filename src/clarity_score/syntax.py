@@ -96,3 +96,10 @@ def tag_sentence(sentence: str) -> list[tuple[str, str]]:
     ensure_nltk_data()
     tokens = nltk.word_tokenize(sentence)
     return nltk.pos_tag(tokens)
+
+__all__ = [
+    "AmbiguityHit",
+    "SyntaxReport",
+    "analyze_syntax",
+    "tag_sentence",
+]

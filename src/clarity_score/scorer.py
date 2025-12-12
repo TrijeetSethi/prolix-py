@@ -67,3 +67,9 @@ class CoherenceScorer(Protocol):
     def score(self, sentence: str, tokens: Sequence[tuple[str, str]]) -> float:
         """Returns coherence score on 0-100 scale. Higher = more coherent."""
         ...
+
+__all__ = [
+    "CoherenceScorer",
+    "SemanticScorer",
+    "WordnetPolysemyScorer",
+]

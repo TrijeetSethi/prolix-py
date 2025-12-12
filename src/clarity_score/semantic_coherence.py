@@ -194,3 +194,9 @@ class MiniLMCoherenceScorer:
         #    1 (identical meaning)    -> ~95 (highly coherent)
         raw = 50.0 + avg_sim * 45.0
         return max(10.0, min(100.0, raw))
+
+__all__ = [
+    "MiniLMCoherenceScorer",
+    "extract_content_words",
+    "sentence_coherence_score",
+]

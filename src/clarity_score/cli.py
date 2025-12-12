@@ -26,6 +26,8 @@ import sys
 import time
 from pathlib import Path
 
+__all__ = ["main", "entry_single", "entry_dir", "entry_compare"]
+
 
 def main(argv: list[str] | None = None) -> int:
     """Top-level entry point — dispatches to subcommand handlers.
@@ -38,12 +40,12 @@ def main(argv: list[str] | None = None) -> int:
 
     # Detect explicit subcommand in argv
     if argv and argv[0] == "dir":
-        return _entry_dir(argv[1:])
+        return entry_dir(argv[1:])
     elif argv and argv[0] == "compare":
-        return _entry_compare(argv[1:])
+        return entry_compare(argv[1:])
 
     # Fallback: single-file/sentence analysis (backward compatible)
-    return _entry_single(argv)
+    return entry_single(argv)
 
 
 # ---------------------------------------------------------------------------
@@ -51,7 +53,7 @@ def main(argv: list[str] | None = None) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _entry_single(argv: list[str] | None = None) -> int:
+def entry_single(argv: list[str] | None = None) -> int:
     """Entry point for `clarity-score` — single sentence/file analysis."""
     parser = argparse.ArgumentParser(
         prog="clarity-score",
@@ -73,7 +75,7 @@ def _entry_single(argv: list[str] | None = None) -> int:
     return _cmd_single(args)
 
 
-def _entry_dir(argv: list[str] | None = None) -> int:
+def entry_dir(argv: list[str] | None = None) -> int:
     """Entry point for `clarity-score-dir` — directory scanning."""
     parser = argparse.ArgumentParser(
         prog="clarity-score-dir",
@@ -92,7 +94,7 @@ def _entry_dir(argv: list[str] | None = None) -> int:
     return _cmd_dir(args)
 
 
-def _entry_compare(argv: list[str] | None = None) -> int:
+def entry_compare(argv: list[str] | None = None) -> int:
     """Entry point for `clarity-score-compare` — model comparison."""
     parser = argparse.ArgumentParser(
         prog="clarity-score-compare",
