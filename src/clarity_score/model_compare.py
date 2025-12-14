@@ -19,6 +19,7 @@ import time
 import json
 import math
 from dataclasses import dataclass, field
+from typing import Any
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -420,10 +421,7 @@ def _compute_comparison(
     )
 
 
-# -------------------------------------------------------
-# Type references for internal imports
-# -------------------------------------------------------
-from typing import Any
+
 
 
 def _score_results(model_name: str, scores: list[tuple[str, float]]) -> Sequence[tuple[Path, Any]]:

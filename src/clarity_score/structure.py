@@ -70,7 +70,6 @@ class StructureReport:
 # ---------------------------------------------------------------------------
 
 _HEADINGS_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
-_SEOCTIIONS_RE = re.compile(r"^#{2,4}\s+.+$", re.MULTILINE)
 
 
 def _count_headings(text: str) -> int:
