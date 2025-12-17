@@ -50,6 +50,7 @@ __all__ = [
     "LexicalReport",
     "ScoreWeights",
     "StructureReport",
+    "SyntaxReport",
     "VagueHit",
     "WordLexicalInfo",
     # Scorer protocols

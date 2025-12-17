@@ -1,5 +1,5 @@
 """Tests for lexical.py — WordNet-backed polysemy and specificity scoring."""
-from clarity_score.lexical import analyze_lexical, lookup_word, _get_or_create_cache
+from clarity_score.lexical import analyze_lexical, lookup_word
 
 
 def test_polysemous_word_has_multiple_senses():

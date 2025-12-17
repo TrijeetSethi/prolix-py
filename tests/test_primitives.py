@@ -6,7 +6,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import pytest
-import json
 import tempfile
 
 from clarity_score.primitives import (
@@ -14,8 +13,7 @@ from clarity_score.primitives import (
     extract_primitives, apply_formula, apply_all_formulas,
     save_primitives, load_primitives,
     _prism_weights, DEFAULT_WEIGHTS,
-    READABILITY_ENABLED_WEIGHTS, NO_STRUCTURE_WEIGHTS,
-    VAGUENESS_HEAVY_WEIGHTS, EVEN_DISTRIBUTION_WEIGHTS,
+    NO_STRUCTURE_WEIGHTS,
 )
 
 

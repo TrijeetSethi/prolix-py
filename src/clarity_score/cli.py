@@ -120,7 +120,7 @@ def entry_compare(argv: list[str] | None = None) -> int:
 
 def _cmd_single(args: argparse.Namespace) -> int:
     """Handle single-file / sentence analysis."""
-    from .scoring import analyze, ScoreWeights
+    from .scoring import analyze
 
     if not args.sentence:
         print("Error: no sentence or file specified. Usage:\n"
@@ -279,7 +279,6 @@ def _cmd_dir(args: argparse.Namespace) -> int:
 
 def _cmd_compare(args: argparse.Namespace) -> int:
     """Handle the `clarity-score-compare` subcommand."""
-    from .clarify import _discover_directory
     from .model_compare import compare_models_benchmark, BenchmarkResult, generate_recommendation
 
     target_path = Path(args.target)

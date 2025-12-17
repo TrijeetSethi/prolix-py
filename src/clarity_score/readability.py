@@ -225,9 +225,9 @@ def coleman_liau(sentences: float, words: float, chars: float) -> float:
     """Coleman-Liau Index: 0.0588*(chars/words)*100 - 0.296*(sentences/words)*100 - 15.8."""
     if words == 0:
         return 0.0
-    l = (chars / words) * 100.0      # characters per 100 words
-    s = (sentences / words) * 100.0  # sentences per 100 words
-    return 0.0588 * l - 0.296 * s - 15.8
+    letters = (chars / words) * 100.0  # characters per 100 words
+    s = (sentences / words) * 100.0    # sentences per 100 words
+    return 0.0588 * letters - 0.296 * s - 15.8
 
 
 # ============================================================

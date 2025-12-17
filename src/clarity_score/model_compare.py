@@ -23,8 +23,6 @@ from typing import Any
 from collections.abc import Sequence
 from pathlib import Path
 
-from .clarify import clarify, compare_models
-
 
 # ============================================================
 # Data classes for comparison results
@@ -443,10 +441,10 @@ def _print_comparison(m: ComparisonMetrics) -> None:
     print(f"  Rank agreement:          {m.rank_agreement_pct:.1f}%")
     print(f"  MAE (raw scores):        {m.mean_absolute_error:.2f}")
     print(f"  MSE (raw scores):        {m.mean_squared_error:.2f}")
-    print(f"\n  Model A coherence:")
+    print("\n  Model A coherence:")
     print(f"    Mean: {m.model_a_mean_coherence:.1f}  Std: {m.model_a_std_coherence:.1f}")
     print(f"    Avg time: {m.model_a_avg_time_ms:.0f}ms / doc")
-    print(f"\n  Model B coherence:")
+    print("\n  Model B coherence:")
     print(f"    Mean: {m.model_b_mean_coherence:.1f}  Std: {m.model_b_std_coherence:.1f}")
     print(f"    Avg time: {m.model_b_avg_time_ms:.0f}ms / doc")
     if m.overhead_ratio > 1.0:

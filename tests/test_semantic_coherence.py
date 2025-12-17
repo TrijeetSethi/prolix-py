@@ -5,6 +5,8 @@
 - Graceful degradation when feature not installed
 """
 
+import importlib.util
+
 import pytest
 
 
@@ -13,7 +15,6 @@ class TestCosineSimilarity:
 
     def test_identical_vectors(self):
         from clarity_score.semantic_coherence import _cosine_similarity
-        import math
 
         a = [1.0, 2.0, 3.0]
         b = [1.0, 2.0, 3.0]
@@ -165,12 +166,14 @@ class TestGracefulDegradation:
     def test_error_message_on_import_failure(self):
         """If someone tries to use MiniLMCoherenceScorer without the feature,
         they get a clear error message."""
-        try:
-            from clarity_score.semantic_coherence import MiniLMCoherenceScorer
-            # If we got here, the feature IS installed — skip this test in that case
+        if importlib.util.find_spec("sentence_transformers") is not None:
             pytest.skip("semantic-coherence feature is installed")
-        except ImportError as e:
-            assert "semantic-coherence" in str(e).lower() or "feature" in str(e).lower()
+        from clarity_score.semantic_coherence import MiniLMCoherenceScorer
+
+        with pytest.raises(ImportError) as excinfo:
+            MiniLMCoherenceScorer()
+        message = str(excinfo.value).lower()
+        assert "semantic-coherence" in message or "feature" in message
 
 
 class TestIntegrationWithScorer:

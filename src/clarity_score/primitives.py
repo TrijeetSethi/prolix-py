@@ -31,7 +31,6 @@ import json
 import re
 from dataclasses import dataclass, field, asdict
 from typing import Optional
-from collections.abc import Iterable
 from pathlib import Path
 
 
@@ -158,10 +157,10 @@ def extract_primitives(
         ClarityPrimitives with all sub-scores populated (or None for disabled
         signals).
     """
-    from .lexical import LexicalReport, analyze_lexical
-    from .scorer import SemanticScorer, WordnetPolysemyScorer
-    from .syntax import SyntaxReport, analyze_syntax, tag_sentence
-    from .vague_lexicon import VagueHit, find_vague_hits
+    from .lexical import analyze_lexical
+    from .scorer import WordnetPolysemyScorer
+    from .syntax import analyze_syntax, tag_sentence
+    from .vague_lexicon import find_vague_hits
     from .structure import analyze_structure as _analyze_structure
 
     semantic_scorer = WordnetPolysemyScorer()

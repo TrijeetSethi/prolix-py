@@ -7,13 +7,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-import pytest
-
 # Use the package source directly to avoid needing an installed package.
 src = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(src))
 
-from clarity_score.cli import entry_dir, entry_single
+from clarity_score.cli import entry_dir, entry_single  # noqa: E402
 
 
 # Fixtures are at repo root, not inside python/
@@ -125,12 +123,6 @@ class TestMainDispatch:
             "--output", "/dev/null",
         ])
         assert result == 0
-
-    def test_main_compare_subcommand(self, tmp_path):
-        from clarity_score.cli import main
-        output = tmp_path / "comparison.json"
-        # Skip model comparison in tests — too slow. Just verify entry point exists.
-        pass  # _cmd_compare is tested via integration above
 
 
 # ============================================================

@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
 
 import pytest
 
 from clarity_score.clarify import (
-    _discover_batch_jsonl,
-    _read_content,
     _strip_frontmatter,
     clarify,
 )
