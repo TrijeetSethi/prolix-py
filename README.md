@@ -105,3 +105,26 @@ pip install -e ".[dev]"
 pytest python/tests/ --tb=short -q
 # 139 passed, 2 skipped (requires sentence-transformers)
 ```
+
+## Data and attribution
+
+The package bundles no WordNet or NLTK data. At run time it reads
+Open English WordNet 2025 (https://en-word.net, Copyright 2019-present The
+Open English WordNet Team, licensed under CC BY 4.0,
+https://creativecommons.org/licenses/by/4.0/), which you download with
+`wn.download('oewn:2025')`. Open English WordNet is derived from Princeton
+WordNet 3.0 (Copyright 2006 by Princeton University). The package also
+downloads the NLTK `punkt_tab` tokenizer and `averaged_perceptron_tagger_eng`
+tagger models from NLTK Data, which are distributed under their own licenses.
+
+## License
+
+clarity-score is licensed under either the MIT license (`LICENSE-MIT`) or the
+Apache License, Version 2.0 (`LICENSE-APACHE-2.0`), at your option. The
+`rust/NOTICE` file in the source repository gives the full WordNet attribution
+and reproduces the Princeton WordNet 3.0 license.
+
+Unless you explicitly state otherwise, any contribution intentionally
+submitted for inclusion in the work by you, as defined in the Apache-2.0
+license, shall be dual licensed as above, without any additional terms or
+conditions.
