@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed duplicate `_score_file` function in clarify.py (S-01)
 - Fixed hatch build packages path (`src/clarity_score` → `clarity_score`)
 - Ensured package data files (`vague_words.txt`, `py.typed`) are included in wheel
+- Empty or whitespace-only text no longer makes NLTK print warnings to stdout, so `clarity-score --json` always prints valid JSON
 
 ## [0.2.0] — 2025-09-24
 

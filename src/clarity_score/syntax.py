@@ -83,6 +83,9 @@ def _find_participle_attachment_hits(tree: nltk.Tree) -> list[AmbiguityHit]:
 def analyze_syntax(tagged_tokens: list[tuple[str, str]]) -> SyntaxReport:
     """Runs all syntactic-ambiguity detectors over an already POS-tagged
     sentence (as produced by `tag_sentence`)."""
+    # NLTK's chunker prints a warning to stdout for an empty token list.
+    if not tagged_tokens:
+        return SyntaxReport()
     tree = _chunker.parse(tagged_tokens)
     hits = [
         *_find_pp_attachment_hits(tree),

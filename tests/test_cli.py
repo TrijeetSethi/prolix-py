@@ -44,6 +44,12 @@ class TestSingleFileCLI:
         result = entry_single([str(skill_md), "--json"])
         assert result == 0
 
+    def test_whitespace_sentence_json_parses(self, capsys):
+        result = entry_single(["   ", "--json"])
+        assert result == 0
+        data = json.loads(capsys.readouterr().out)
+        assert data["clarity_score"] == 0.0
+
 
 # ============================================================
 # Directory scanning (new `clarity-score-dir`)
