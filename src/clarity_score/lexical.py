@@ -2,10 +2,14 @@
 scoring, via the actively-maintained Open English Wordnet (see
 ../../ARCHITECTURE.md decision #4), replacing starter.md's use of NLTK's
 frozen 2006 Princeton WordNet snapshot.
+
+WordNet access is serialized by a module lock, so analyze() can be called
+from several threads at once.
 """
 
 from __future__ import annotations
 
+import threading
 from collections import OrderedDict
 from collections.abc import Iterable
 from dataclasses import dataclass, field
@@ -15,6 +19,9 @@ from wn.morphy import Morphy
 
 _LEXICON = "oewn:2025"
 _wordnet: wn.Wordnet | None = None
+
+# Guards the shared wn.Wordnet, its SQLite connection and _word_cache.
+_lock = threading.RLock()
 
 # Simple LRU cache (max 10K entries) to avoid repeated WordNet lookups
 # for the same word across multiple analyze() calls.
@@ -61,10 +68,21 @@ _FALLBACK_MAX_DEPTH = 3.0
 
 
 def _get_wordnet() -> wn.Wordnet:
+    """Return the shared Wordnet, creating it on first use.
+
+    wn pools one SQLite connection per database for the whole process, and
+    by default that connection only works in the thread that opened it. This
+    function sets wn.config.allow_multithreading, which is process-global
+    and so also applies to the host application's own use of wn. The flag
+    only takes effect when it is set before the first wn connection opens,
+    so it has no effect if the host application used wn first.
+    """
     global _wordnet
-    if _wordnet is None:
-        _wordnet = wn.Wordnet(_LEXICON, lemmatizer=Morphy())
-    return _wordnet
+    with _lock:
+        if _wordnet is None:
+            wn.config.allow_multithreading = True
+            _wordnet = wn.Wordnet(_LEXICON, lemmatizer=Morphy())
+        return _wordnet
 
 
 @dataclass(frozen=True)
@@ -92,30 +110,34 @@ class LexicalReport:
 
 
 def lookup_word(word: str) -> WordLexicalInfo:
-    """Look up a word in WordNet, using an LRU cache to avoid repeated queries."""
-    # Check cache first
-    cache = _get_or_create_cache()
-    cached = cache.get(word)
-    if cached is not None:
-        return cached
+    """Look up a word in WordNet, using an LRU cache to avoid repeated queries.
 
-    synsets = _get_wordnet().synsets(word.lower())
-    if not synsets:
-        result = WordLexicalInfo(
-            word=word,
-            sense_count=_FALLBACK_SENSE_COUNT,
-            avg_max_depth=_FALLBACK_MAX_DEPTH,
-        )
-    else:
-        depths = [s.max_depth() for s in synsets]
-        result = WordLexicalInfo(
-            word=word,
-            sense_count=len(synsets),
-            avg_max_depth=sum(depths) / len(depths),
-        )
+    Safe to call from several threads: the whole lookup holds the module lock.
+    """
+    with _lock:
+        # Check cache first
+        cache = _get_or_create_cache()
+        cached = cache.get(word)
+        if cached is not None:
+            return cached
 
-    cache.put(word, result)
-    return result
+        synsets = _get_wordnet().synsets(word.lower())
+        if not synsets:
+            result = WordLexicalInfo(
+                word=word,
+                sense_count=_FALLBACK_SENSE_COUNT,
+                avg_max_depth=_FALLBACK_MAX_DEPTH,
+            )
+        else:
+            depths = [s.max_depth() for s in synsets]
+            result = WordLexicalInfo(
+                word=word,
+                sense_count=len(synsets),
+                avg_max_depth=sum(depths) / len(depths),
+            )
+
+        cache.put(word, result)
+        return result
 
 
 def analyze_lexical(words: Iterable[str]) -> LexicalReport:
