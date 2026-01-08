@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added explicit `__all__` to all modules for better IDE/type-checker support
 - Renamed entry point functions from `_entry_*` to `entry_*`
 - Added `py.typed` marker for PEP 561 compliance
+- Cold WordNet lookups are several times faster because hypernym depth is memoized per synset. Scores do not change
 
 ### Fixed
 - Removed duplicate `_score_file` function in clarify.py (S-01)

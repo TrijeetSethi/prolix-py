@@ -85,6 +85,25 @@ def _get_wordnet() -> wn.Wordnet:
         return _wordnet
 
 
+# Hypernym depth per synset id. Synset.max_depth() walks every hypernym
+# path through SQLite and repeats the work for shared ancestors, so the
+# depth is memoized per synset instead. Guarded by _lock.
+_synset_depth: dict[str, int] = {}
+
+
+def _max_depth(synset: wn.Synset) -> int:
+    """Return the same value as synset.max_depth(), memoized per synset."""
+    depth = _synset_depth.get(synset.id)
+    if depth is not None:
+        return depth
+    # Store 0 first so that a cycle in the hypernym graph cannot recurse forever.
+    _synset_depth[synset.id] = 0
+    hypernyms = synset.get_related("hypernym", "instance_hypernym")
+    depth = 1 + max(_max_depth(h) for h in hypernyms) if hypernyms else 0
+    _synset_depth[synset.id] = depth
+    return depth
+
+
 @dataclass(frozen=True)
 class WordLexicalInfo:
     word: str
@@ -129,7 +148,7 @@ def lookup_word(word: str) -> WordLexicalInfo:
                 avg_max_depth=_FALLBACK_MAX_DEPTH,
             )
         else:
-            depths = [s.max_depth() for s in synsets]
+            depths = [_max_depth(s) for s in synsets]
             result = WordLexicalInfo(
                 word=word,
                 sense_count=len(synsets),
