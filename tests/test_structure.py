@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import time
+
 import pytest
 
 from clarity_score.structure import (
@@ -11,6 +13,7 @@ from clarity_score.structure import (
     _count_list_items,
     _count_code_blocks,
     _estimate_action_ratio,
+    _max_heading_depth,
 )
 
 
@@ -49,6 +52,12 @@ Some content
 """
         assert _count_headings(text) == 5
 
+    def test_max_heading_depth(self):
+        assert _max_heading_depth("# A\n### B") == 3
+
+    def test_heading_marker_does_not_span_lines(self):
+        assert _count_headings("#\nfoo") == 0
+
 
 class TestListCounting:
     """Test bullet and numbered list detection."""
@@ -81,6 +90,9 @@ class TestListCounting:
 2. Numbered two
 """
         assert _count_list_items(text) == 4
+
+    def test_list_marker_does_not_span_lines(self):
+        assert _count_list_items("-\nitem\n1.\nfoo") == 0
 
 
 class TestCodeBlockCounting:
@@ -230,3 +242,17 @@ class TestStructureIntegration:
         data = result.to_json()
         assert "structural_clarity" in data
         assert isinstance(data["structural_clarity"], float)
+
+
+class TestStructureRunTime:
+    """Whitespace-heavy input must not make the regexes quadratic."""
+
+    @pytest.mark.parametrize(
+        "text",
+        ["\n" * 100_000, "# a" + " " * 100_000 + "b"],
+        ids=["blank-lines", "padded-heading"],
+    )
+    def test_whitespace_runs_finish_quickly(self, text):
+        start = time.perf_counter()
+        analyze_structure(text)
+        assert time.perf_counter() - start < 1.0

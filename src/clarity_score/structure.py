@@ -69,7 +69,9 @@ class StructureReport:
 # Heading analysis
 # ---------------------------------------------------------------------------
 
-_HEADINGS_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
+# Horizontal whitespace only, so no match can cross a line and the scan stays
+# linear on long runs of blank lines or spaces.
+_HEADINGS_RE = re.compile(r"^(#{1,6})[ \t]+(\S.*)$", re.MULTILINE)
 
 
 def _count_headings(text: str) -> int:
@@ -89,8 +91,8 @@ def _max_heading_depth(text: str) -> int:
 # List analysis
 # ---------------------------------------------------------------------------
 
-_UNORDERED_LIST = re.compile(r"^\s*[-*\u2022]\s+\S", re.MULTILINE)
-_ORDERED_LIST = re.compile(r"^\s*\d+[.)]\s+\S", re.MULTILINE)
+_UNORDERED_LIST = re.compile(r"^[ \t]*[-*\u2022][ \t]+\S", re.MULTILINE)
+_ORDERED_LIST = re.compile(r"^[ \t]*\d+[.)][ \t]+\S", re.MULTILINE)
 
 
 def _count_list_items(text: str) -> int:
