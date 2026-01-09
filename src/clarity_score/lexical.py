@@ -76,12 +76,24 @@ def _get_wordnet() -> wn.Wordnet:
     and so also applies to the host application's own use of wn. The flag
     only takes effect when it is set before the first wn connection opens,
     so it has no effect if the host application used wn first.
+
+    Raises LookupError naming the download command when the lexicon is not
+    installed.
     """
     global _wordnet
     with _lock:
         if _wordnet is None:
             wn.config.allow_multithreading = True
-            _wordnet = wn.Wordnet(_LEXICON, lemmatizer=Morphy())
+            try:
+                _wordnet = wn.Wordnet(_LEXICON, lemmatizer=Morphy())
+            except wn.DatabaseError:
+                # A broken or incompatible database is not a missing lexicon.
+                raise
+            except wn.Error as exc:
+                raise LookupError(
+                    f"WordNet data {_LEXICON} is not installed. "
+                    f"Run: python -m wn download {_LEXICON}"
+                ) from exc
         return _wordnet
 
 

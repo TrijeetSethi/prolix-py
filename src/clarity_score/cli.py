@@ -24,9 +24,14 @@ import json
 import statistics as _stats
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 __all__ = ["main", "entry_single", "entry_dir", "entry_compare"]
+
+# Exit code for missing NLTK or WordNet data, distinct from exit code 1,
+# which reports a failed run or a score below --fail-under.
+_EXIT_MISSING_DATA = 2
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -72,7 +77,7 @@ def entry_single(argv: list[str] | None = None) -> int:
     )
 
     args = parser.parse_args(argv)
-    return _cmd_single(args)
+    return _run(_cmd_single, args)
 
 
 def entry_dir(argv: list[str] | None = None) -> int:
@@ -91,7 +96,7 @@ def entry_dir(argv: list[str] | None = None) -> int:
     )
 
     args = parser.parse_args(argv)
-    return _cmd_dir(args)
+    return _run(_cmd_dir, args)
 
 
 def entry_compare(argv: list[str] | None = None) -> int:
@@ -110,7 +115,27 @@ def entry_compare(argv: list[str] | None = None) -> int:
     parser.add_argument("--readability", "-r", action="store_true", help="Include readability metrics")
 
     args = parser.parse_args(argv)
-    return _cmd_compare(args)
+    return _run(_cmd_compare, args)
+
+
+def _is_missing_data(exc: BaseException) -> bool:
+    """True for the LookupError raised when NLTK or WordNet data is missing.
+
+    KeyError and IndexError are LookupError subclasses too, but they mean a
+    bug, so they are not treated as missing data.
+    """
+    return isinstance(exc, LookupError) and not isinstance(exc, (KeyError, IndexError))
+
+
+def _run(handler: Callable[[argparse.Namespace], int], args: argparse.Namespace) -> int:
+    """Run a subcommand handler and report missing language data in one line."""
+    try:
+        return handler(args)
+    except LookupError as exc:
+        if not _is_missing_data(exc):
+            raise
+        print(f"Error: {exc}", file=sys.stderr)
+        return _EXIT_MISSING_DATA
 
 
 # ---------------------------------------------------------------------------
@@ -237,6 +262,8 @@ def _cmd_dir(args: argparse.Namespace) -> int:
             results.append((str(skill_file), row))
             print(f"  ✓ {skill_file.parent.name:30s} → clarity={row['clarity_score']:5.1f}")
         except Exception as exc:
+            if _is_missing_data(exc):
+                raise
             errors.append((str(skill_file), str(exc)))
             print(f"  ✗ {skill_file.parent.name:30s} → ERROR: {exc}", file=sys.stderr)
 

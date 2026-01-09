@@ -1,5 +1,16 @@
 """Tests for lexical.py — WordNet-backed polysemy and specificity scoring."""
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+from clarity_score import _nltk_data
 from clarity_score.lexical import analyze_lexical, lookup_word
+
+SRC = Path(__file__).resolve().parents[1] / "src"
+FIXTURE_DIR = Path(__file__).resolve().parents[2] / "fixtures" / "skills"
 
 
 def test_polysemous_word_has_multiple_senses():
@@ -66,3 +77,36 @@ def test_cache_different_words_produce_different_results():
     info1 = lookup_word("run")
     info2 = lookup_word("jump")
     assert info1.word != info2.word
+
+
+# ---------------------------------------------------------------------------
+# Missing language data
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "args",
+    [["The dog ran."], ["dir", str(FIXTURE_DIR), "--pattern", "**/SKILL.md"]],
+    ids=["single", "dir"],
+)
+def test_cli_exits_2_when_wordnet_is_missing(args, tmp_path):
+    env = {**os.environ, "WN_DATA_DIR": str(tmp_path), "PYTHONPATH": str(SRC)}
+    proc = subprocess.run(
+        [sys.executable, "-m", "clarity_score.cli", *args],
+        capture_output=True, text=True, env=env, timeout=120,
+    )
+    assert proc.returncode == 2
+    assert "python -m wn download oewn:2025" in proc.stderr
+    assert "Traceback" not in proc.stderr
+
+
+def test_failed_nltk_download_raises_lookup_error(monkeypatch):
+    def not_found(path):
+        raise LookupError(path)
+
+    monkeypatch.setattr(_nltk_data, "_ensured", False)
+    monkeypatch.setattr(_nltk_data.nltk.data, "find", not_found)
+    monkeypatch.setattr(_nltk_data.nltk, "download", lambda *args, **kwargs: False)
+    with pytest.raises(LookupError, match="python -m nltk.downloader punkt_tab"):
+        _nltk_data.ensure_nltk_data()
+    assert _nltk_data._ensured is False

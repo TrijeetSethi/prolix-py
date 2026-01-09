@@ -18,6 +18,7 @@ _ensured = False
 
 
 def ensure_nltk_data() -> None:
+    """Download missing NLTK resources, or raise LookupError if that fails."""
     global _ensured
     if _ensured:
         return
@@ -26,6 +27,13 @@ def ensure_nltk_data() -> None:
             nltk.data.find(path)
         except LookupError:
             nltk.download(package, quiet=True)
+            try:
+                nltk.data.find(path)
+            except LookupError:
+                raise LookupError(
+                    f"NLTK data {package} is not installed and could not be downloaded. "
+                    "Run: python -m nltk.downloader punkt_tab averaged_perceptron_tagger_eng"
+                ) from None
     _ensured = True
 
 __all__ = ["ensure_nltk_data"]
