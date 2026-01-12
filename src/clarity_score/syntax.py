@@ -80,18 +80,41 @@ def _find_participle_attachment_hits(tree: nltk.Tree) -> list[AmbiguityHit]:
     return []
 
 
+_DETECTORS = (
+    _find_pp_attachment_hits,
+    _find_coordination_scope_hits,
+    _find_participle_attachment_hits,
+)
+
+
+def _sentence_segments(
+    tagged_tokens: list[tuple[str, str]],
+) -> list[list[tuple[str, str]]]:
+    """Splits a tagged stream after every token tagged '.'.
+
+    No rule in _CHUNK_GRAMMAR matches a '.' tag, so no chunk can span a cut
+    and chunking each segment gives the same chunks as chunking the whole
+    stream. NLTK's chunker takes time quadratic in the stream length, so
+    chunking per sentence keeps long documents fast.
+    """
+    segments: list[list[tuple[str, str]]] = []
+    start = 0
+    for i, (_tok, tag) in enumerate(tagged_tokens):
+        if tag == ".":
+            segments.append(tagged_tokens[start : i + 1])
+            start = i + 1
+    if start < len(tagged_tokens):
+        segments.append(tagged_tokens[start:])
+    return segments
+
+
 def analyze_syntax(tagged_tokens: list[tuple[str, str]]) -> SyntaxReport:
     """Runs all syntactic-ambiguity detectors over an already POS-tagged
-    sentence (as produced by `tag_sentence`)."""
-    # NLTK's chunker prints a warning to stdout for an empty token list.
-    if not tagged_tokens:
-        return SyntaxReport()
-    tree = _chunker.parse(tagged_tokens)
-    hits = [
-        *_find_pp_attachment_hits(tree),
-        *_find_coordination_scope_hits(tree),
-        *_find_participle_attachment_hits(tree),
-    ]
+    sentence or document (as produced by `tag_sentence`)."""
+    # Empty segments are never parsed: NLTK's chunker prints a warning to
+    # stdout for an empty token list.
+    trees = [_chunker.parse(segment) for segment in _sentence_segments(tagged_tokens)]
+    hits = [hit for detect in _DETECTORS for tree in trees for hit in detect(tree)]
     return SyntaxReport(hits=hits)
 
 
