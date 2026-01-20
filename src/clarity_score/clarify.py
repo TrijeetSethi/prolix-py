@@ -142,7 +142,7 @@ def _discover_batch_jsonl(path: Path) -> list[dict[str, Any]]:
         List of dicts with at least a ``"path"`` key.
     """
     entries: list[dict[str, Any]] = []
-    lines = path.read_text().splitlines()
+    lines = path.read_text(encoding="utf-8-sig").splitlines()
     for line_no, line in enumerate(lines, 1):
         line = line.strip()
         if not line or line.startswith("#"):
@@ -171,7 +171,7 @@ def _discover_batch_jsonl(path: Path) -> list[dict[str, Any]]:
 
 def _read_content(path: Path) -> str:
     """Read a file and strip any YAML frontmatter."""
-    text = path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8-sig")
     return _strip_frontmatter(text)
 
 

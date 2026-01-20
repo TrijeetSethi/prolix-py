@@ -292,7 +292,7 @@ def save_primitives(path: Path, rows: list[dict], fmt: str = "jsonl") -> None:
         {"commit":"abc123","author":"Jane Doe","msg":"Add skill X",
          "prims":{"semantic_ambiguity":55.0,"specificity":30.0,...}}
     """
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         for row in rows:
             line = dict(row)
             prims = row["primitives"]
@@ -304,7 +304,7 @@ def save_primitives(path: Path, rows: list[dict], fmt: str = "jsonl") -> None:
 def load_primitives(path: Path) -> list[dict]:
     """Load primitives from a JSONL file produced by ``save_primitives``."""
     rows = []
-    for line in open(path):
+    for line in open(path, encoding="utf-8"):
         line = line.strip()
         if not line or line.startswith("#"):
             continue

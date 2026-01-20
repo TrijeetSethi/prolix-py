@@ -314,7 +314,7 @@ def compare_models_benchmark(
         _print_comparison(comp)
 
     if output_json:
-        Path(output_json).write_text(benchmark.to_json())
+        Path(output_json).write_text(benchmark.to_json(), encoding="utf-8")
         print(f"\nJSON results saved to: {output_json}")
 
     return benchmark

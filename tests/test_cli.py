@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 # Use the package source directly to avoid needing an installed package.
 src = Path(__file__).resolve().parents[1] / "src"
@@ -50,6 +53,25 @@ class TestSingleFileCLI:
         data = json.loads(capsys.readouterr().out)
         assert data["clarity_score"] == 0.0
 
+    @pytest.mark.skipif(sys.platform == "win32", reason="LC_ALL has no effect on Windows")
+    def test_utf8_file_under_ascii_locale(self, tmp_path):
+        """A UTF-8 file is read as UTF-8 even when the locale encoding is ASCII."""
+        skill_md = tmp_path / "quote.md"
+        skill_md.write_text("Click \u201cSave\u201d to store the file.\n", encoding="utf-8")
+        env = {
+            **os.environ,
+            "PYTHONUTF8": "0",
+            "PYTHONCOERCECLOCALE": "0",
+            "LC_ALL": "C",
+            "PYTHONPATH": os.pathsep.join(filter(None, [str(src), os.environ.get("PYTHONPATH")])),
+        }
+        proc = subprocess.run(
+            [sys.executable, "-m", "clarity_score.cli", str(skill_md), "--json"],
+            capture_output=True, encoding="utf-8", env=env,
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert "\u201d" in json.loads(proc.stdout)["sentence"]
+
 
 # ============================================================
 # Directory scanning (new `clarity-score-dir`)
@@ -73,7 +95,7 @@ class TestDirCLI:
         output = tmp_path / "results.csv"
         result = entry_dir([str(FIXTURE_DIR), "--pattern", "**/SKILL.md", "--output", str(output)])
         assert result == 0
-        content = output.read_text()
+        content = output.read_text(encoding="utf-8")
         assert "clarity_score" in content
         assert "vague" in content
         assert "specific" in content
@@ -83,7 +105,7 @@ class TestDirCLI:
         output = tmp_path / "results.json"
         result = entry_dir([str(FIXTURE_DIR), "--pattern", "**/SKILL.md", "--output", str(output)])
         assert result == 0
-        data = json.loads(output.read_text())
+        data = json.loads(output.read_text(encoding="utf-8"))
         # JSON export produces a list of row dicts
         assert isinstance(data, list)
         assert len(data) == 2
@@ -155,7 +177,7 @@ output = sys.stdout.getvalue()
 sys.stdout = old
 print(json.loads(output)["clarity_score"])
 """],
-            capture_output=True, text=True
+            capture_output=True, encoding="utf-8"
         )
         score = float(captured.stdout.strip())
         assert 0 <= score <= 100

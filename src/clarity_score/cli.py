@@ -157,7 +157,7 @@ def _cmd_single(args: argparse.Namespace) -> int:
     text = args.sentence
     sent_path = Path(args.sentence)
     if sent_path.is_file():
-        text = sent_path.read_text()
+        text = sent_path.read_text(encoding="utf-8-sig")
 
     # Try to load coherence scorer if requested (graceful degradation)
     coherence_scorer = None
@@ -276,11 +276,11 @@ def _cmd_dir(args: argparse.Namespace) -> int:
         if suffix == ".json":
             # Export just the dicts (strip path keys for cleaner JSON)
             export_data = [dict(row) for _, row in results]
-            with output_path.open("w") as f:
+            with output_path.open("w", encoding="utf-8") as f:
                 json.dump(export_data, f, indent=2)
             print(f"\nExported {len(results)} results to {output_path}")
         else:  # CSV (default)
-            with output_path.open("w", newline="") as f:
+            with output_path.open("w", newline="", encoding="utf-8") as f:
                 writer = csv.DictWriter(f, fieldnames=keys)
                 writer.writeheader()
                 for _, row in results:
@@ -342,7 +342,7 @@ def _cmd_compare(args: argparse.Namespace) -> int:
 
     # Export to JSON
     output_path = Path(args.output)
-    with output_path.open("w") as f:
+    with output_path.open("w", encoding="utf-8") as f:
         f.write(result.to_json())
     print(f"\nJSON results saved to: {output_path}")
 
