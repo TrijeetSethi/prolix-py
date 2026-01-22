@@ -42,10 +42,12 @@ class TestSingleFileCLI:
         assert "clarity_score" in data
         assert data["sentence"] == "The cat sat on the mat."
 
-    def test_single_file_json(self):
-        skill_md = FIXTURE_DIR / "specific_calendar.md"
+    def test_single_file_json(self, capsys):
+        skill_md = FIXTURE_DIR / "specific" / "SKILL.md"
+        assert skill_md.is_file()
         result = entry_single([str(skill_md), "--json"])
         assert result == 0
+        assert json.loads(capsys.readouterr().out)["sentence"] != str(skill_md)
 
     def test_whitespace_sentence_json_parses(self, capsys):
         result = entry_single(["   ", "--json"])
