@@ -173,10 +173,11 @@ def _cmd_single(args: argparse.Namespace) -> int:
         include_readability=args.readability,
         coherence_scorer=coherence_scorer,
     )
+    failed = args.fail_under > 0.0 and result.clarity_score < args.fail_under
 
     if args.json:
         print(json.dumps(result.to_json(), indent=2))
-        return 0
+        return 1 if failed else 0
 
     display_label = sent_path.name if sent_path.is_file() else args.sentence
     print(f"Sentence: {display_label!r}")
@@ -199,7 +200,7 @@ def _cmd_single(args: argparse.Namespace) -> int:
     if result.context_coherence is not None:
         print(f"  Context coherence:      {result.context_coherence:.1f}/100")
 
-    if args.fail_under > 0.0 and result.clarity_score < args.fail_under:
+    if failed:
         print(f"\nFail: clarity score {result.clarity_score:.1f} < threshold {args.fail_under}", file=sys.stderr)
         return 1
 

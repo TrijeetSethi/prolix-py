@@ -55,6 +55,14 @@ class TestSingleFileCLI:
         data = json.loads(capsys.readouterr().out)
         assert data["clarity_score"] == 0.0
 
+    def test_fail_under_json_exit_code(self, capsys):
+        assert entry_single(["Use the thing.", "--json", "--fail-under", "99"]) == 1
+        assert json.loads(capsys.readouterr().out)["clarity_score"] < 99
+
+    def test_fail_under_text_exit_code(self, capsys):
+        assert entry_single(["Use the thing.", "--fail-under", "99"]) == 1
+        assert "Fail:" in capsys.readouterr().err
+
     @pytest.mark.skipif(sys.platform == "win32", reason="LC_ALL has no effect on Windows")
     def test_utf8_file_under_ascii_locale(self, tmp_path):
         """A UTF-8 file is read as UTF-8 even when the locale encoding is ASCII."""
