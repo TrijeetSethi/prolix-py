@@ -49,6 +49,12 @@ class TestSingleFileCLI:
         assert result == 0
         assert json.loads(capsys.readouterr().out)["sentence"] != str(skill_md)
 
+    def test_long_sentence_is_scored_as_text(self, capsys):
+        """Text longer than the file name limit is scored, not probed as a path."""
+        sentence = "The chef stirred the soup with the spoon. " * 25
+        assert entry_single([sentence, "--json"]) == 0
+        assert json.loads(capsys.readouterr().out)["sentence"] == sentence
+
     def test_whitespace_sentence_json_parses(self, capsys):
         result = entry_single(["   ", "--json"])
         assert result == 0

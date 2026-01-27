@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Syntax analysis chunks the tagged text one sentence at a time, so large documents no longer take quadratic time or raise NLTK's `TimeoutError`. Hits are identical to chunking the whole text at once, so scores do not change
 - Every text file is read and written as UTF-8, so a `SKILL.md` or batch JSONL file containing characters such as curly quotes no longer fails or decodes wrongly on Windows or under a non-UTF-8 locale. A leading byte order mark is ignored, so it no longer stops front matter from being stripped
 - `clarity-score --json --fail-under N` now exits with code 1 when the score is below N, as it already did without `--json`. Before, JSON mode always exited with code 0
+- `clarity-score` scores a text argument longer than the file name limit (255 bytes on most systems) as text on Python 3.10 to 3.13. Before, checking whether the argument named a file raised `OSError: [Errno 36] File name too long`
 
 ## [0.2.0] — 2025-09-24
 

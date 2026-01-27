@@ -156,7 +156,13 @@ def _cmd_single(args: argparse.Namespace) -> int:
     # Check if it's a file path that exists, or treat as a sentence
     text = args.sentence
     sent_path = Path(args.sentence)
-    if sent_path.is_file():
+    try:
+        is_file = sent_path.is_file()
+    except (OSError, ValueError):
+        # Before Python 3.14, is_file() raises OSError (ENAMETOOLONG) when the
+        # text is longer than the file name limit, so treat it as text.
+        is_file = False
+    if is_file:
         text = sent_path.read_text(encoding="utf-8-sig")
 
     # Try to load coherence scorer if requested (graceful degradation)
@@ -179,7 +185,7 @@ def _cmd_single(args: argparse.Namespace) -> int:
         print(json.dumps(result.to_json(), indent=2))
         return 1 if failed else 0
 
-    display_label = sent_path.name if sent_path.is_file() else args.sentence
+    display_label = sent_path.name if is_file else args.sentence
     print(f"Sentence: {display_label!r}")
     print(f"  Clarity score:          {result.clarity_score:.1f}/100")
     print(f"  Semantic ambiguity:     {result.semantic_ambiguity:.1f}")
