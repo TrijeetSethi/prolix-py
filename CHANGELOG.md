@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed entry point functions from `_entry_*` to `entry_*`
 - Added `py.typed` marker for PEP 561 compliance
 - Cold WordNet lookups are several times faster because hypernym depth is memoized per synset. Scores do not change
+- `clarity-score` exits with code 2 and prints one `error:` line when the input is empty, is a directory, names a missing `.md`, `.markdown` or `.txt` file, or cannot be read as UTF-8. Before, a directory or a missing file was scored as text and a non-UTF-8 file raised a traceback. Exit code 1 is left for a score below `--fail-under`
 
 ### Fixed
 - Removed duplicate `_score_file` function in clarify.py (S-01)
@@ -27,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Every text file is read and written as UTF-8, so a `SKILL.md` or batch JSONL file containing characters such as curly quotes no longer fails or decodes wrongly on Windows or under a non-UTF-8 locale. A leading byte order mark is ignored, so it no longer stops front matter from being stripped
 - `clarity-score --json --fail-under N` now exits with code 1 when the score is below N, as it already did without `--json`. Before, JSON mode always exited with code 0
 - `clarity-score` scores a text argument longer than the file name limit (255 bytes on most systems) as text on Python 3.10 to 3.13. Before, checking whether the argument named a file raised `OSError: [Errno 36] File name too long`
+- `clarity-score FILE` reads the file like `clarify()` and `clarity-score-dir` do, so front matter is stripped and a file gets the same score from every entry point
 
 ## [0.2.0] — 2025-09-24
 

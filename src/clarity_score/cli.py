@@ -33,6 +33,12 @@ __all__ = ["main", "entry_single", "entry_dir", "entry_compare"]
 # which reports a failed run or a score below --fail-under.
 _EXIT_MISSING_DATA = 2
 
+# Exit code for empty, missing or unreadable input to clarity-score.
+_EXIT_BAD_INPUT = 2
+
+# A single word with one of these suffixes is taken to be a file path.
+_TEXT_FILE_SUFFIXES = (".md", ".markdown", ".txt")
+
 
 def main(argv: list[str] | None = None) -> int:
     """Top-level entry point — dispatches to subcommand handlers.
@@ -145,25 +151,39 @@ def _run(handler: Callable[[argparse.Namespace], int], args: argparse.Namespace)
 
 def _cmd_single(args: argparse.Namespace) -> int:
     """Handle single-file / sentence analysis."""
+    from .clarify import _read_content
     from .scoring import analyze
 
     if not args.sentence:
         print("Error: no sentence or file specified. Usage:\n"
               "  clarity-score \"The cat sat on the mat.\" --json\n"
               "  clarity-score my-skill.md --json", file=sys.stderr)
-        return 1
+        return _EXIT_BAD_INPUT
 
     # Check if it's a file path that exists, or treat as a sentence
     text = args.sentence
     sent_path = Path(args.sentence)
     try:
         is_file = sent_path.is_file()
+        is_dir = not is_file and sent_path.is_dir()
     except (OSError, ValueError):
         # Before Python 3.14, is_file() raises OSError (ENAMETOOLONG) when the
         # text is longer than the file name limit, so treat it as text.
-        is_file = False
+        is_file = is_dir = False
+    if is_dir:
+        print(f"error: {args.sentence} is a directory, use clarity-score-dir", file=sys.stderr)
+        return _EXIT_BAD_INPUT
     if is_file:
-        text = sent_path.read_text(encoding="utf-8-sig")
+        # Read like clarify() and clarity-score-dir: UTF-8, front matter stripped.
+        try:
+            text = _read_content(sent_path)
+        except (OSError, UnicodeDecodeError) as exc:
+            print(f"error: cannot read {args.sentence}: {exc}", file=sys.stderr)
+            return _EXIT_BAD_INPUT
+    elif (sent_path.suffix.lower() in _TEXT_FILE_SUFFIXES
+          and not any(ch.isspace() for ch in args.sentence)):
+        print(f"error: cannot read {args.sentence}: no such file", file=sys.stderr)
+        return _EXIT_BAD_INPUT
 
     # Try to load coherence scorer if requested (graceful degradation)
     coherence_scorer = None

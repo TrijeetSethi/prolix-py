@@ -14,6 +14,7 @@ import pytest
 src = Path(__file__).resolve().parents[1] / "src"
 sys.path.insert(0, str(src))
 
+from clarity_score.clarify import clarify  # noqa: E402
 from clarity_score.cli import entry_dir, entry_single  # noqa: E402
 
 
@@ -87,6 +88,44 @@ class TestSingleFileCLI:
         )
         assert proc.returncode == 0, proc.stderr
         assert "\u201d" in json.loads(proc.stdout)["sentence"]
+
+    def test_front_matter_file_scores_like_clarify(self, tmp_path, capsys):
+        """A file is read like clarify(): front matter is stripped before scoring."""
+        skill_md = tmp_path / "SKILL.md"
+        skill_md.write_text(
+            "---\nname: demo\ndescription: Helps with various stuff and things\n---\n\n"
+            "Run the build script, then open the report in a browser.\n",
+            encoding="utf-8",
+        )
+        assert entry_single([str(skill_md), "--json"]) == 0
+        data = json.loads(capsys.readouterr().out)
+        expected = clarify(skill_md, include_readability=False).to_json()
+        assert data["sentence"] == expected["sentence"]
+        assert data["clarity_score"] == expected["clarity_score"]
+
+    def test_non_utf8_file_exits_2(self, tmp_path, capsys):
+        skill_md = tmp_path / "latin1.md"
+        skill_md.write_bytes("Caf\u00e9 menu for the week.\n".encode("latin-1"))
+        assert entry_single([str(skill_md), "--json"]) == 2
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert captured.err.startswith(f"error: cannot read {skill_md}: ")
+
+    def test_directory_exits_2(self, tmp_path, capsys):
+        assert entry_single([str(tmp_path), "--json"]) == 2
+        assert "is a directory, use clarity-score-dir" in capsys.readouterr().err
+
+    def test_missing_markdown_file_exits_2(self, tmp_path, capsys):
+        assert entry_single([str(tmp_path / "missing.md"), "--json"]) == 2
+        assert "error: cannot read" in capsys.readouterr().err
+
+    def test_sentence_ending_in_file_name_is_text(self, capsys):
+        assert entry_single(["Update the README.md", "--json"]) == 0
+        assert json.loads(capsys.readouterr().out)["sentence"] == "Update the README.md"
+
+    def test_empty_input_exits_2(self, capsys):
+        assert entry_single([""]) == 2
+        assert "no sentence or file specified" in capsys.readouterr().err
 
 
 # ============================================================
