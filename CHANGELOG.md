@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `py.typed` marker for PEP 561 compliance
 - Cold WordNet lookups are several times faster because hypernym depth is memoized per synset. Scores do not change
 - `clarity-score` exits with code 2 and prints one `error:` line when the input is empty, is a directory, names a missing `.md`, `.markdown` or `.txt` file, or cannot be read as UTF-8. Before, a directory or a missing file was scored as text and a non-UTF-8 file raised a traceback. Exit code 1 is left for a score below `--fail-under`
+- Front matter is stripped by one rule: the first line is exactly `---` and the block ends at the next line that is exactly `---`, with trailing spaces and tabs allowed on both lines. A leading byte order mark is ignored and CRLF line endings are accepted. Text with blank lines before the opening `---` is no longer treated as having front matter
 
 ### Fixed
 - Removed duplicate `_score_file` function in clarify.py (S-01)
@@ -29,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `clarity-score --json --fail-under N` now exits with code 1 when the score is below N, as it already did without `--json`. Before, JSON mode always exited with code 0
 - `clarity-score` scores a text argument longer than the file name limit (255 bytes on most systems) as text on Python 3.10 to 3.13. Before, checking whether the argument named a file raised `OSError: [Errno 36] File name too long`
 - `clarity-score FILE` reads the file like `clarify()` and `clarity-score-dir` do, so front matter is stripped and a file gets the same score from every entry point
+- Front matter no longer ends at a `---` inside a line such as `description: a---`, and a first line such as `--- not frontmatter` no longer opens a block. Inline `content` in a batch JSONL file now has its front matter stripped, as files already did
 
 ## [0.2.0] — 2025-09-24
 

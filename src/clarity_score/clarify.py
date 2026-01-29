@@ -35,6 +35,7 @@ See ../../tools/PLAN_CLARIFY_WORKFLOW.md for the full design.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -54,6 +55,11 @@ __all__ = [
 # ---------------------------------------------------------------------------
 
 
+# Front matter opens with a first line that is exactly --- and closes at the
+# next line that is exactly ---. Trailing spaces and tabs are allowed on both.
+_FRONTMATTER_RE = re.compile(r"---[ \t]*\n(?:.*?\n)?---[ \t]*(?:\n|\Z)", re.DOTALL)
+
+
 def _strip_frontmatter(text: str) -> str:
     """Strip YAML frontmatter (--- ... ---) from the beginning of *text*.
 
@@ -67,39 +73,18 @@ def _strip_frontmatter(text: str) -> str:
 
         Actual skill content ...
 
-    This function returns everything after the closing ``---`` (whitespace
-    trimmed).  If no frontmatter is detected the text is returned verbatim.
-
-    Handles both single-line and multiline description blocks::
-
-        description: |-
-            multi-
-            line text
+    Front matter exists only when the first line is exactly ``---``, and it
+    ends at the next line that is exactly ``---``. Trailing spaces and tabs on
+    those two lines are allowed. A leading byte order mark is ignored and CRLF
+    line endings are read as LF. This function returns everything after the
+    closing line with leading whitespace removed. If there is no front matter
+    the text is returned verbatim.
     """
-    stripped = text.lstrip()
-
-    # Must start with --- on its own line
-    if not stripped.startswith("---"):
+    normalized = text.removeprefix("\ufeff").replace("\r\n", "\n")
+    match = _FRONTMATTER_RE.match(normalized)
+    if match is None:
         return text
-
-    # Find the closing --- (may be preceded/followed by whitespace only)
-    pos = 3  # skip opening ---
-    while True:
-        next_dash = stripped.find("---", pos)
-        if next_dash == -1:
-            return text  # no closing delimiter found — treat as regular text
-
-        after = next_dash + 3
-        rest = stripped[after:]
-
-        # Closing delimiter must be on its own line (start of line or after newline+whitespace)
-        if not rest or rest[0] == "\n" or rest.strip() == "":
-            # Check the lines before are valid frontmatter content
-            return stripped[after:].lstrip()
-
-        pos = next_dash + 3
-
-    return text
+    return normalized[match.end():].lstrip()
 
 
 def _discover_single_file(path: Path) -> list[Path]:
@@ -366,7 +351,7 @@ def _score_batch(
             if content_inline:
                 # Inline content — no file reading needed
                 result = analyze(
-                    content_inline,
+                    _strip_frontmatter(content_inline),
                     include_readability=include_readability,
                     coherence_scorer=coherence_scorer,
                 )

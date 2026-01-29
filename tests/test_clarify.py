@@ -110,6 +110,55 @@ class TestFrontmatterStripping:
         assert not stripped.startswith("---")
         assert "Body." in stripped
 
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "﻿---\nname: x\ndescription: various stuff\n---\n\nBody text here.\n",
+            "---\r\nname: x\r\ndescription: various stuff\r\n---\r\n\r\nBody text here.\r\n",
+            "---\nname: x\ndescription: a---\nlicense: MIT\n---\n\nBody text here.\n",
+            "--- \nname: x\n---\t\nBody text here.\n",
+            "---\n---\nBody text here.\n",
+        ],
+        ids=["bom", "crlf", "dashes-inside-a-line", "trailing-blanks", "empty-block"],
+    )
+    def test_front_matter_is_stripped(self, text: str):
+        assert _strip_frontmatter(text) == "Body text here.\n"
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "--- not frontmatter\nname: x\n---\nBody text here.\n",
+            "\n---\nname: x\n---\nBody text here.\n",
+            "---\nname: x\nBody text here.\n",
+            "Intro.\n---\nname: x\n---\nBody text here.\n",
+        ],
+        ids=["text-after-opener", "blank-line-first", "unclosed", "not-first-line"],
+    )
+    def test_text_without_front_matter_is_unchanged(self, text: str):
+        assert _strip_frontmatter(text) == text
+
+    def test_bom_file(self, tmp_path: Path):
+        f = tmp_path / "bom.md"
+        f.write_bytes(
+            b"\xef\xbb\xbf---\nname: x\ndescription: various stuff\n---\n\nBody text here.\n"
+        )
+        assert clarify(f, include_readability=False).sentence == "Body text here.\n"
+
+    def test_crlf_inline_batch_content(self, tmp_path: Path):
+        """Inline batch content is stripped like a file with the same text."""
+        body = "---\nname: x\ndescription: various stuff\n---\n\nBody text here.\n"
+        md = tmp_path / "skill.md"
+        md.write_text(body, encoding="utf-8")
+        batch = tmp_path / "batch.jsonl"
+        batch.write_text(
+            json.dumps({"name": "inline", "content": body.replace("\n", "\r\n")}) + "\n"
+            + json.dumps({"name": "file", "path": str(md)}) + "\n",
+            encoding="utf-8",
+        )
+        results = clarify(batch, include_readability=False)
+        assert results["inline"].sentence == "Body text here.\n"
+        assert results["inline"].to_json() == results["file"].to_json()
+
 
 # ---------------------------------------------------------------------------
 # Test: single-file scoring
