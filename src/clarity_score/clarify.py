@@ -35,10 +35,11 @@ See ../../tools/PLAN_CLARIFY_WORKFLOW.md for the full design.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
     from .scorer import CoherenceScorer
@@ -49,6 +50,14 @@ __all__ = [
     "clarify",
     "compare_models",
 ]
+
+logger = logging.getLogger(__name__)
+
+
+def _check_on_error(on_error: str) -> None:
+    """Raise ``ValueError`` unless *on_error* is ``"skip"`` or ``"raise"``."""
+    if on_error not in ("skip", "raise"):
+        raise ValueError(f"on_error must be 'skip' or 'raise', got {on_error!r}")
 
 
 # ---------------------------------------------------------------------------
@@ -205,6 +214,7 @@ def clarify(
     coherence_scorer: "CoherenceScorer | None" = None,
     pattern: str = "**/*.md",
     fmt: str = "auto",
+    on_error: Literal["skip", "raise"] = "skip",
 ) -> AnalysisResult | dict[str, AnalysisResult] | list[tuple[Path, AnalysisResult]]:
     """Score a single file, batch JSONL, or directory recursively.
 
@@ -223,6 +233,11 @@ def clarify(
         pattern: Glob pattern for directory scanning (default ``**/*.md``).
             Set to ``"*/SKILL.md"`` to only find SKILL.md files.
         fmt: Output format hint — currently unused (auto-detection always applies).
+        on_error: What directory and batch modes do with a file or entry that
+            fails to read or score. ``"skip"`` (the default) leaves it out of
+            the results and logs a warning on the ``clarity_score.clarify``
+            logger. ``"raise"`` re-raises the error. A single file always
+            raises.
 
     Returns:
         - Single file: ``AnalysisResult``
@@ -235,8 +250,10 @@ def clarify(
     Raises:
         FileNotFoundError: When the single-file path does not exist.
         NotADirectoryError: When the directory path is not a directory.
-        ValueError: When JSONL lines are malformed or missing ``"path"`` key.
-        OSError: On read errors (permissions, encoding issues).
+        ValueError: When JSONL lines are malformed or missing ``"path"`` key,
+            or when *on_error* is not ``"skip"`` or ``"raise"``.
+        UnicodeDecodeError: When a single file is not valid UTF-8.
+        OSError: When a single file cannot be read.
 
     Examples::
 
@@ -252,6 +269,7 @@ def clarify(
         # Batch JSONL
         results = clarify("batch.jsonl")
     """
+    _check_on_error(on_error)
     path = Path(path)
 
     if fmt != "auto":
@@ -266,7 +284,9 @@ def clarify(
     if path.is_file():
         # Check if it looks like a JSONL file
         if path.suffix == ".jsonl" or path.suffix == ".json":
-            return _score_batch(path, include_readability, coherence_scorer)
+            return _score_batch(
+                path, include_readability, coherence_scorer, on_error=on_error,
+            )
         else:
             result = _score_file(
                 path, content=None,
@@ -279,6 +299,7 @@ def clarify(
     elif path.is_dir():
         return _score_directory(
             path, pattern, include_readability, coherence_scorer,
+            on_error=on_error,
         )
 
     else:
@@ -295,13 +316,16 @@ def _score_directory(
     pattern: str,
     include_readability: bool,
     coherence_scorer: "CoherenceScorer | None",
+    *,
+    on_error: Literal["skip", "raise"] = "skip",
 ) -> list[tuple[Path, AnalysisResult]]:
     """Score all files matching *pattern* in *dir_path*.
 
     Returns a sorted list of ``(Path, AnalysisResult)`` tuples.
-    Files that fail to parse produce a minimal zero-score result with a
-    warning written to stderr (non-fatal).
+    With ``on_error="skip"`` a file that fails to read or score is left out
+    and logged as a warning. With ``on_error="raise"`` the error propagates.
     """
+    _check_on_error(on_error)
     discovered = _discover_directory(dir_path, pattern)
 
     results: list[tuple[Path, AnalysisResult]] = []
@@ -315,11 +339,9 @@ def _score_directory(
             )
             results.append((file_path, result))
         except Exception as exc:
-            import sys
-            print(
-                f"Warning: failed to score {file_path}: {exc}",
-                file=sys.stderr,
-            )
+            if on_error == "raise":
+                raise
+            logger.warning("failed to score %s: %s", file_path, exc)
 
     # Sort by resolved path for deterministic ordering
     results.sort(key=lambda x: x[0])
@@ -330,6 +352,8 @@ def _score_batch(
     batch_path: Path,
     include_readability: bool,
     coherence_scorer: "CoherenceScorer | None",
+    *,
+    on_error: Literal["skip", "raise"] = "skip",
 ) -> dict[str, AnalysisResult]:
     """Score entries from a JSONL batch file.
 
@@ -337,7 +361,9 @@ def _score_batch(
     both. If the line has a ``"content"`` key, that string is used directly
     instead of reading from disk. A relative ``"path"`` is read from the
     batch file's directory when the file exists there, and from the working
-    directory otherwise.
+    directory otherwise. With ``on_error="skip"`` an entry that fails to read
+    or score is left out and logged as a warning. With ``on_error="raise"``
+    the error propagates.
 
     Returns:
         Dict mapping a key to the ``AnalysisResult``. The key is ``"name"`` if
@@ -346,6 +372,7 @@ def _score_batch(
         key is already taken the raw ``"path"`` is used instead, and a number
         is appended if that is taken too, so no result is overwritten.
     """
+    _check_on_error(on_error)
     entries = _discover_batch_jsonl(batch_path)
 
     results: dict[str, AnalysisResult] = {}
@@ -393,11 +420,9 @@ def _score_batch(
 
             results[key] = result
         except Exception as exc:
-            import sys
-            print(
-                f"Warning: failed to score batch entry {entry_path}: {exc}",
-                file=sys.stderr,
-            )
+            if on_error == "raise":
+                raise
+            logger.warning("failed to score %s: %s", entry_path, exc)
 
     return results
 

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `clarify()` takes `on_error="skip"` (the default) or `on_error="raise"`. With `"raise"`, directory and batch modes raise the first error from a file or entry instead of skipping it. Any other value raises `ValueError`
+
 ### Changed
 - Updated minimum Python version to 3.10 (using PEP 604 union syntax)
 - Moved `import re` from function body to module level in scoring.py
@@ -16,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cold WordNet lookups are several times faster because hypernym depth is memoized per synset. Scores do not change
 - `clarity-score` exits with code 2 and prints one `error:` line when the input is empty, is a directory, names a missing `.md`, `.markdown` or `.txt` file, or cannot be read as UTF-8. Before, a directory or a missing file was scored as text and a non-UTF-8 file raised a traceback. Exit code 1 is left for a score below `--fail-under`
 - Front matter is stripped by one rule: the first line is exactly `---` and the block ends at the next line that is exactly `---`, with trailing spaces and tabs allowed on both lines. A leading byte order mark is ignored and CRLF line endings are accepted. Text with blank lines before the opening `---` is no longer treated as having front matter
+- In directory and batch modes `clarify()` logs a file or entry that fails to score as a warning on the `clarity_score.clarify` logger instead of printing to stderr. The file is still left out of the results, and the docstrings no longer promise a zero-score result for it
 
 ### Fixed
 - Removed duplicate `_score_file` function in clarify.py (S-01)

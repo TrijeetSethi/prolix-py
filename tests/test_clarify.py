@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 
 import pytest
@@ -364,3 +365,43 @@ class TestErrorHandling:
         bad.write_text('{"name": "test", "other": "no path or content"}\n')
         with pytest.raises(ValueError, match='either "path" or "content"'):
             clarify(bad)
+
+    @pytest.fixture
+    def latin1_dir(self, tmp_path: Path) -> Path:
+        """A directory with one UTF-8 file and one latin-1 file."""
+        docs = tmp_path / "docs"
+        docs.mkdir()
+        (docs / "good.md").write_text("Run the tests.\n", encoding="utf-8")
+        (docs / "bad.md").write_bytes(b"Caf\xe9 menu.\n")
+        return docs
+
+    def test_directory_skips_and_logs_failed_file(self, latin1_dir: Path, caplog):
+        with caplog.at_level(logging.WARNING, logger="clarity_score.clarify"):
+            results = clarify(latin1_dir, include_readability=False)
+        assert [p.name for p, _ in results] == ["good.md"]
+        assert len(caplog.records) == 1
+        assert "failed to score" in caplog.records[0].getMessage()
+        assert "bad.md" in caplog.records[0].getMessage()
+
+    def test_directory_raises_with_on_error_raise(self, latin1_dir: Path):
+        with pytest.raises(UnicodeDecodeError):
+            clarify(latin1_dir, include_readability=False, on_error="raise")
+
+    def test_batch_skips_and_logs_failed_entry(self, latin1_dir: Path, caplog):
+        batch = latin1_dir / "batch.jsonl"
+        batch.write_text('{"path": "good.md"}\n{"path": "bad.md"}\n', encoding="utf-8")
+        with caplog.at_level(logging.WARNING, logger="clarity_score.clarify"):
+            results = clarify(batch, include_readability=False)
+        assert list(results) == ["good"]
+        assert len(caplog.records) == 1
+        assert "bad.md" in caplog.records[0].getMessage()
+        with pytest.raises(UnicodeDecodeError):
+            clarify(batch, include_readability=False, on_error="raise")
+
+    def test_single_file_read_error_raises(self, latin1_dir: Path):
+        with pytest.raises(UnicodeDecodeError):
+            clarify(latin1_dir / "bad.md")
+
+    def test_invalid_on_error(self, latin1_dir: Path):
+        with pytest.raises(ValueError, match="on_error"):
+            clarify(latin1_dir, on_error="ignore")
