@@ -241,6 +241,46 @@ class TestBatchJSONL:
             assert hasattr(entry, "clarity_score")
             assert isinstance(entry.clarity_score, float)
 
+    @staticmethod
+    def _skill_batch(tmp_path: Path) -> Path:
+        for name in ("alpha", "beta"):
+            skill = tmp_path / "skills" / name
+            skill.mkdir(parents=True)
+            (skill / "SKILL.md").write_text(
+                f"---\nname: {name}\n---\n\n# {name}\n\nRun the tests.\n", encoding="utf-8"
+            )
+        batch = tmp_path / "batch.jsonl"
+        batch.write_text(
+            '{"path": "skills/alpha/SKILL.md"}\n{"path": "skills/beta/SKILL.md"}\n',
+            encoding="utf-8",
+        )
+        return batch
+
+    def test_batch_keys_skill_md_by_directory(self, tmp_path: Path, monkeypatch):
+        batch = self._skill_batch(tmp_path)
+        monkeypatch.chdir(tmp_path)
+        results = clarify(batch.name, include_readability=False)
+        assert set(results) == {"alpha", "beta"}
+
+    def test_batch_relative_paths_resolve_from_batch_dir(self, tmp_path: Path, monkeypatch):
+        batch = self._skill_batch(tmp_path)
+        elsewhere = tmp_path / "elsewhere"
+        elsewhere.mkdir()
+        monkeypatch.chdir(elsewhere)
+        results = clarify(batch, include_readability=False)
+        assert set(results) == {"alpha", "beta"}
+
+    def test_batch_duplicate_key_falls_back_to_path(self, tmp_path: Path):
+        batch = tmp_path / "batch.jsonl"
+        batch.write_text(
+            json.dumps({"name": "same", "path": "a.md", "content": "Run the tests."}) + "\n"
+            + json.dumps({"name": "same", "path": "b.md", "content": "Read the file."}) + "\n"
+            + json.dumps({"name": "same", "path": "b.md", "content": "Read the file."}) + "\n",
+            encoding="utf-8",
+        )
+        results = clarify(batch, include_readability=False)
+        assert list(results) == ["same", "b.md", "b.md (2)"]
+
 
 # ---------------------------------------------------------------------------
 # Test: clarity ordering (vague < specific)

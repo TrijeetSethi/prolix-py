@@ -35,6 +35,7 @@ See ../../tools/PLAN_CLARIFY_WORKFLOW.md for the full design.
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -117,11 +118,11 @@ def _discover_batch_jsonl(path: Path) -> list[dict[str, Any]]:
 
     Supported line shapes:
         {"path": "skills/foo/SKILL.md"}
-            → read the content from disk at runtime
+            reads the content from disk at runtime.
         {"path": "skills/foo/SKILL.md", "content": "# My skill ..."}
-            → use inline content directly (avoids extra disk I/O)
+            uses the inline content directly and reads nothing from disk.
         {"path": "skills/foo/SKILL.md", "name": "foo-bar"}
-            → only path is used; name is metadata only
+            reads the file and keys its result as ``"foo-bar"``.
 
     Returns:
         List of dicts with at least a ``"path"`` key.
@@ -226,7 +227,10 @@ def clarify(
     Returns:
         - Single file: ``AnalysisResult``
         - Directory scan: ``list[tuple[Path, AnalysisResult]]`` sorted by path
-        - Batch JSONL: ``dict[str, AnalysisResult]`` keyed on ``"name"`` or ``"path"`` stem
+        - Batch JSONL: ``dict[str, AnalysisResult]`` keyed on ``"name"``, else the
+          directory name of a ``SKILL.md`` path, else the ``"path"`` stem. A
+          relative path is read from the batch file's directory when the file
+          exists there, and from the working directory otherwise.
 
     Raises:
         FileNotFoundError: When the single-file path does not exist.
@@ -329,23 +333,45 @@ def _score_batch(
 ) -> dict[str, AnalysisResult]:
     """Score entries from a JSONL batch file.
 
-    Each line is a JSON object with at least a ``"path"`` key.
-    If the line also has a ``"content"`` key, that string is used directly
-    instead of reading from disk.
+    Each line is a JSON object with a ``"path"`` key, a ``"content"`` key, or
+    both. If the line has a ``"content"`` key, that string is used directly
+    instead of reading from disk. A relative ``"path"`` is read from the
+    batch file's directory when the file exists there, and from the working
+    directory otherwise.
 
     Returns:
-        Dict keyed on ``"name"`` if present, otherwise the stem of ``"path"``,
-        mapping to the ``AnalysisResult``.
+        Dict mapping a key to the ``AnalysisResult``. The key is ``"name"`` if
+        present, else the parent directory name when the file is named
+        ``SKILL.md``, else the stem of ``"path"``, else ``entry_N``. When that
+        key is already taken the raw ``"path"`` is used instead, and a number
+        is appended if that is taken too, so no result is overwritten.
     """
     entries = _discover_batch_jsonl(batch_path)
 
     results: dict[str, AnalysisResult] = {}
     for entry in entries:
-        entry_path = Path(entry.get("path", ""))
+        raw_path = entry.get("path", "")
+        entry_path = Path(raw_path)
+        # Prefer a file next to the batch file; keep CWD-relative paths working.
+        if raw_path and not entry_path.is_absolute():
+            batch_relative = batch_path.parent / entry_path
+            if batch_relative.is_file():
+                entry_path = batch_relative
         content_inline = entry.get("content")
 
-        # Key is "name" if present, otherwise file stem (or entry index)
-        key = entry.get("name") or (entry_path.stem if entry_path.name else f"entry_{len(results)}")
+        # Key is "name", else the skill directory of a SKILL.md, else the file
+        # stem or entry index. A taken key falls back to the raw path.
+        key = entry.get("name")
+        if not key and entry_path.name == "SKILL.md":
+            key = Path(os.path.abspath(entry_path)).parent.name
+        if not key:
+            key = entry_path.stem if entry_path.name else f"entry_{len(results)}"
+        if key in results:
+            key = raw_path or key
+        base_key, suffix = key, 2
+        while key in results:
+            key = f"{base_key} ({suffix})"
+            suffix += 1
 
         try:
             if content_inline:

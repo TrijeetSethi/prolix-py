@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `clarity-score` scores a text argument longer than the file name limit (255 bytes on most systems) as text on Python 3.10 to 3.13. Before, checking whether the argument named a file raised `OSError: [Errno 36] File name too long`
 - `clarity-score FILE` reads the file like `clarify()` and `clarity-score-dir` do, so front matter is stripped and a file gets the same score from every entry point
 - Front matter no longer ends at a `---` inside a line such as `description: a---`, and a first line such as `--- not frontmatter` no longer opens a block. Inline `content` in a batch JSONL file now has its front matter stripped, as files already did
+- Batch JSONL results from `clarify()` are keyed by the skill directory name when an entry's file is named `SKILL.md`, so a batch of `SKILL.md` files no longer collapses to one result. A key that is already taken falls back to the entry's `path`, so no result is overwritten. A relative `path` is read from the batch file's directory when the file exists there, and from the working directory otherwise
 
 ## [0.2.0] — 2025-09-24
 
