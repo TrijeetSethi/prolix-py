@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `clarity-score` exits with code 2 and prints one `error:` line when the input is empty, is a directory, names a missing `.md`, `.markdown` or `.txt` file, or cannot be read as UTF-8. Before, a directory or a missing file was scored as text and a non-UTF-8 file raised a traceback. Exit code 1 is left for a score below `--fail-under`
 - Front matter is stripped by one rule: the first line is exactly `---` and the block ends at the next line that is exactly `---`, with trailing spaces and tabs allowed on both lines. A leading byte order mark is ignored and CRLF line endings are accepted. Text with blank lines before the opening `---` is no longer treated as having front matter
 - In directory and batch modes `clarify()` logs a file or entry that fails to score as a warning on the `clarity_score.clarify` logger instead of printing to stderr. The file is still left out of the results, and the docstrings no longer promise a zero-score result for it
+- `clarity-score-dir` prints plain ASCII: `ok` and `error` instead of check marks, crosses and arrows, a line of hyphens above the summary, and no low variance hint
 
 ### Fixed
 - Removed duplicate `_score_file` function in clarify.py (S-01)
@@ -36,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `clarity-score FILE` reads the file like `clarify()` and `clarity-score-dir` do, so front matter is stripped and a file gets the same score from every entry point
 - Front matter no longer ends at a `---` inside a line such as `description: a---`, and a first line such as `--- not frontmatter` no longer opens a block. Inline `content` in a batch JSONL file now has its front matter stripped, as files already did
 - Batch JSONL results from `clarify()` are keyed by the skill directory name when an entry's file is named `SKILL.md`, so a batch of `SKILL.md` files no longer collapses to one result. A key that is already taken falls back to the entry's `path`, so no result is overwritten. A relative `path` is read from the batch file's directory when the file exists there, and from the working directory otherwise
+- `clarity-score-dir` no longer reports every file as failed and then crashes when stdout cannot encode non-ASCII characters, as with redirected output on Windows. A file is reported as an error only when scoring it fails
 
 ## [0.2.0] — 2025-09-24
 

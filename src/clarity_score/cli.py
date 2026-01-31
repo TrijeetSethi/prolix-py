@@ -285,14 +285,15 @@ def _cmd_dir(args: argparse.Namespace) -> int:
             # Add coherence
             if result.context_coherence is not None:
                 row["context_coherence"] = round(result.context_coherence, 2)
-
-            results.append((str(skill_file), row))
-            print(f"  ✓ {skill_file.parent.name:30s} → clarity={row['clarity_score']:5.1f}")
         except Exception as exc:
             if _is_missing_data(exc):
                 raise
             errors.append((str(skill_file), str(exc)))
-            print(f"  ✗ {skill_file.parent.name:30s} → ERROR: {exc}", file=sys.stderr)
+            print(f"  error {skill_file.parent.name:30s} {exc}", file=sys.stderr)
+            continue
+
+        results.append((str(skill_file), row))
+        print(f"  ok    {skill_file.parent.name:30s} clarity={row['clarity_score']:5.1f}")
 
     # Export to CSV or JSON
     if args.output and results:
@@ -323,10 +324,8 @@ def _cmd_dir(args: argparse.Namespace) -> int:
         scores = [r["clarity_score"] for _, r in results]
         c_mean = _stats.mean(scores)
         c_std = _stats.stdev(scores) if len(scores) > 1 else 0
-        print(f"\n{'─' * 45}")
+        print(f"\n{'-' * 45}")
         print(f"Clarity: mean={c_mean:.1f}, std={c_std:.1f}, n={len(results)}")
-        if c_std < 10:
-            print("  ⚠ LOW VARIANCE (std < 10): consider adding structural signal")
 
     return 1 if errors else 0
 

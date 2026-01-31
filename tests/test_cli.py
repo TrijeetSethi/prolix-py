@@ -173,6 +173,21 @@ class TestDirCLI:
         result = entry_dir(["/nonexistent/path"])
         assert result == 1
 
+    def test_dir_ascii_stdout(self):
+        """Directory scan output is plain ASCII, so a non-UTF-8 stdout works."""
+        env = {
+            **os.environ,
+            "PYTHONIOENCODING": "ascii",
+            "PYTHONPATH": os.pathsep.join(filter(None, [str(src), os.environ.get("PYTHONPATH")])),
+        }
+        proc = subprocess.run(
+            [sys.executable, "-m", "clarity_score.cli", "dir", str(FIXTURE_DIR)],
+            capture_output=True, encoding="utf-8", env=env,
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert "ok    specific" in proc.stdout
+        assert "ok    vague" in proc.stdout
+
 
 # ============================================================
 # Main dispatcher (backward compatibility)
