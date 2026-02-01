@@ -235,7 +235,7 @@ def _cmd_single(args: argparse.Namespace) -> int:
 
 def _cmd_dir(args: argparse.Namespace) -> int:
     """Handle the `clarity-score-dir` subcommand."""
-    from .clarify import clarify, _discover_directory
+    from .clarify import _discover_directory, _score_file
 
     skills_path = Path(args.target)
     if not skills_path.is_dir():
@@ -264,7 +264,11 @@ def _cmd_dir(args: argparse.Namespace) -> int:
 
     for skill_file in files:
         try:
-            result = clarify(skill_file, include_readability=args.readability, coherence_scorer=coherence_scorer)
+            result = _score_file(
+                skill_file,
+                include_readability=args.readability,
+                coherence_scorer=coherence_scorer,
+            )
             row: dict = {
                 "name": skill_file.parent.name,
                 "path": str(skill_file),

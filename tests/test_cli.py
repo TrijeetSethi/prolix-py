@@ -222,6 +222,19 @@ class TestMainDispatch:
         ])
         assert result == 0
 
+    def test_main_dir_jsonl_pattern(self, tmp_path, capsys):
+        """A discovered .jsonl file is scored as one file, not as a batch."""
+        from clarity_score.cli import main
+        batch = tmp_path / "batch.jsonl"
+        batch.write_text(
+            '{"path": "demo/SKILL.md", "content": "Run the build script."}\n',
+            encoding="utf-8",
+        )
+        assert main(["dir", str(tmp_path), "-p", "*.jsonl"]) == 0
+        captured = capsys.readouterr()
+        assert f"ok    {tmp_path.name}" in captured.out
+        assert "error" not in captured.err
+
 
 # ============================================================
 # JSON output consistency
