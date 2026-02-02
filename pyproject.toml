@@ -23,6 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Text Processing :: Linguistic",
+    "Typing :: Typed",
 ]
 dependencies = [
     "nltk>=3.9",
@@ -69,3 +70,12 @@ include = [
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[[tool.mypy.overrides]]
+module = ["nltk", "nltk.*", "sentence_transformers"]
+ignore_missing_imports = true
+
+# model_compare is a research module that is not type-checked.
+[[tool.mypy.overrides]]
+module = ["clarity_score.model_compare"]
+ignore_errors = true

@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Batch JSONL results from `clarify()` are keyed by the skill directory name when an entry's file is named `SKILL.md`, so a batch of `SKILL.md` files no longer collapses to one result. A key that is already taken falls back to the entry's `path`, so no result is overwritten. A relative `path` is read from the batch file's directory when the file exists there, and from the working directory otherwise
 - `clarity-score-dir` no longer reports every file as failed and then crashes when stdout cannot encode non-ASCII characters, as with redirected output on Windows. A file is reported as an error only when scoring it fails
 - `clarity-score-dir` scores every file that matches the pattern as one document, so `-p '*.jsonl'` or `-p '*.json'` no longer fails each file with `'dict' object has no attribute 'clarity_score'`
+- The shipped type hints pass mypy, including on Python 3.10, and the package declares the `Typing :: Typed` classifier. The bundled vague word list is located with a call that Python 3.10 type stubs accept
 
 ## [0.2.0] — 2025-09-24
 

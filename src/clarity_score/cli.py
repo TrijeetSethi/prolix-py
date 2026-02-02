@@ -217,9 +217,9 @@ def _cmd_single(args: argparse.Namespace) -> int:
         print(f"    - {hit.kind}: {hit.span!r}")
     if result.vague_hits:
         print(f"  Vague-word hits:        {len(result.vague_hits)}")
-        for hit in result.vague_hits:
-            print(f"    - {hit.phrase!r} (-{hit.penalty:g})")
-    if hasattr(result, "structural_clarity"):
+        for vhit in result.vague_hits:
+            print(f"    - {vhit.phrase!r} (-{vhit.penalty:g})")
+    if result.structural_clarity is not None:
         print(f"  Structural clarity:     {result.structural_clarity:.1f}/100")
     if result.readability_score is not None:
         print(f"  Readability score:      {result.readability_score:.1f}/100")
@@ -281,7 +281,7 @@ def _cmd_dir(args: argparse.Namespace) -> int:
                 "vague_word_hits": len(result.vague_hits),
             }
             # Add structural clarity
-            if hasattr(result, "structural_clarity"):
+            if result.structural_clarity is not None:
                 row["structural_clarity"] = round(result.structural_clarity, 2)
             # Add readability
             if result.readability_score is not None:

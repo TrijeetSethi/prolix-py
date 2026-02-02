@@ -33,8 +33,11 @@ def _parse_lexicon(text: str) -> frozenset[str]:
 
 @lru_cache(maxsize=1)
 def _default_lexicon() -> frozenset[str]:
-    text = resources.files("clarity_score").joinpath("data", "vague_words.txt").read_text(
-        encoding="utf-8"
+    text = (
+        resources.files("clarity_score")
+        .joinpath("data")
+        .joinpath("vague_words.txt")
+        .read_text(encoding="utf-8")
     )
     return _parse_lexicon(text)
 
