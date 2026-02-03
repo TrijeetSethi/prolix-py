@@ -45,10 +45,14 @@ def _default_lexicon() -> frozenset[str]:
 def find_vague_hits(
     words: Sequence[str],
     *,
-    extra_vague_words: Iterable[str] | None = None,
+    extra_vague_words: str | Iterable[str] | None = None,
 ) -> list[VagueHit]:
     """Greedily matches the longest vague-lexicon entry (words or
-    multi-word phrases, e.g. "kind of") starting at each token position."""
+    multi-word phrases, e.g. "kind of") starting at each token position.
+
+    A single string passed as extra_vague_words counts as one entry."""
+    if isinstance(extra_vague_words, str):
+        extra_vague_words = [extra_vague_words]
     lexicon = _default_lexicon()
     if extra_vague_words:
         lexicon = lexicon | {w.strip().lower() for w in extra_vague_words}

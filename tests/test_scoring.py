@@ -1,4 +1,6 @@
 """Tests for scoring.py — weighted formula, normalization, and edge cases."""
+import pytest
+
 from clarity_score.scoring import ScoreWeights, analyze
 
 
@@ -51,6 +53,17 @@ def test_empty_text_returns_zero_clarity():
     assert result.clarity_score == 0.0
     assert result.semantic_ambiguity == 0.0
     assert result.specificity == 0.0
+
+
+@pytest.mark.parametrize("value", [b"x", None, 42])
+def test_non_str_input_raises_type_error(value):
+    with pytest.raises(TypeError, match="text must be str"):
+        analyze(value)
+
+
+def test_single_string_extra_vague_word_counts_as_one_entry():
+    result = analyze("Hand me the gizmo please.", extra_vague_words="gizmo")
+    assert [hit.phrase for hit in result.vague_hits] == ["gizmo"]
 
 
 def test_single_word_sentence_scores_validly():

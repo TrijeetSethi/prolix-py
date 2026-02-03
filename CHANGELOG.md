@@ -40,6 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `clarity-score-dir` no longer reports every file as failed and then crashes when stdout cannot encode non-ASCII characters, as with redirected output on Windows. A file is reported as an error only when scoring it fails
 - `clarity-score-dir` scores every file that matches the pattern as one document, so `-p '*.jsonl'` or `-p '*.json'` no longer fails each file with `'dict' object has no attribute 'clarity_score'`
 - The shipped type hints pass mypy, including on Python 3.10, and the package declares the `Typing :: Typed` classifier. The bundled vague word list is located with a call that Python 3.10 type stubs accept
+- `analyze()` raises a `TypeError` that names the actual type when the text is not a `str`, such as bytes or `None`. Before, NLTK raised an unrelated regular expression error
+- A single string passed as `extra_vague_words` to `analyze()` or `find_vague_hits()` counts as one entry. Before, it was split into characters and had no effect
 
 ## [0.2.0] — 2025-09-24
 

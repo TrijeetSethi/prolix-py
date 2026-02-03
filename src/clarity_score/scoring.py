@@ -106,7 +106,7 @@ def analyze(
     *,
     weights: ScoreWeights | None = None,
     semantic_scorer: SemanticScorer | None = None,
-    extra_vague_words: Iterable[str] | None = None,
+    extra_vague_words: str | Iterable[str] | None = None,
     include_readability: bool = False,
     coherence_scorer: CoherenceScorer | None = None,
 ) -> AnalysisResult:
@@ -116,13 +116,19 @@ def analyze(
         sentence: The sentence to analyze
         weights: Custom score weights (defaults add up to 1.0 across enabled signals)
         semantic_scorer: Semantic scorer for polysemy analysis
-        extra_vague_words: Additional vague words to check against
+        extra_vague_words: Additional vague words to check against. A single
+            string counts as one entry.
         include_readability: Whether to compute readability metrics (always available — no feature check needed)
         coherence_scorer: Coherence scorer instance. If None and coherence enabled, uses default MiniLMCoherenceScorer.
 
     Returns:
         AnalysisResult with clarity score and all applicable sub-scores
+
+    Raises:
+        TypeError: If sentence is not a str, for example bytes or None.
     """
+    if not isinstance(sentence, str):
+        raise TypeError(f"text must be str, not {type(sentence).__name__}")
     weights = weights or ScoreWeights()
     semantic_scorer = semantic_scorer or WordnetPolysemyScorer()
 
