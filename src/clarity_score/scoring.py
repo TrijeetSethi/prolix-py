@@ -76,7 +76,9 @@ class AnalysisResult:
     context_coherence: Optional[float] = None
     structural_clarity: Optional[float] = None
 
-    def to_json(self) -> dict:
+    def to_dict(self) -> dict:
+        """Return the result as a dict that json.dumps accepts. Scores are
+        rounded to two decimals, and optional fields appear only when set."""
         data = {
             "sentence": self.sentence,
             "clarity_score": round(self.clarity_score, 2),
@@ -99,6 +101,11 @@ class AnalysisResult:
         if self.structural_clarity is not None:
             data["structural_clarity"] = round(self.structural_clarity, 2)
         return data
+
+    def to_json(self) -> dict:
+        """Return the same dict as to_dict(). Kept for compatibility; new
+        code should call to_dict()."""
+        return self.to_dict()
 
 
 def analyze(

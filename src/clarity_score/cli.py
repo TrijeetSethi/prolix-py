@@ -202,7 +202,7 @@ def _cmd_single(args: argparse.Namespace) -> int:
     failed = args.fail_under > 0.0 and result.clarity_score < args.fail_under
 
     if args.json:
-        print(json.dumps(result.to_json(), indent=2))
+        print(json.dumps(result.to_dict(), indent=2))
         return 1 if failed else 0
 
     display_label = sent_path.name if is_file else args.sentence

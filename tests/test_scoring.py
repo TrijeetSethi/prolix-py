@@ -32,6 +32,12 @@ def test_to_json_round_trips_basic_shape():
     assert isinstance(data["syntax_ambiguity_hits"], list)
 
 
+def test_to_json_returns_the_same_dict_as_to_dict():
+    result = analyze("The cat sat.", include_readability=True)
+    assert result.to_dict() == result.to_json()
+    assert isinstance(result.to_dict(), dict)
+
+
 # ---------------------------------------------------------------------------
 # Weight redistribution tests
 # ---------------------------------------------------------------------------
