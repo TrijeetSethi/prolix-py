@@ -54,6 +54,18 @@ def test_weights_with_zero_semantic():
     assert w.non_zero_weight_sum() == 0.7
 
 
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf"), -1.0])
+def test_invalid_weight_raises_value_error(value):
+    with pytest.raises(ValueError, match="ScoreWeights.semantic"):
+        ScoreWeights(semantic=value)
+
+
+def test_all_zero_weights_stay_valid():
+    weights = ScoreWeights(semantic=0.0, vagueness=0.0, syntax=0.0, structure=0.0)
+    result = analyze("The chef stirred the soup with the spoon", weights=weights)
+    assert 0.0 <= result.clarity_score <= 100.0
+
+
 def test_empty_text_returns_zero_clarity():
     result = analyze("")
     assert result.clarity_score == 0.0

@@ -18,8 +18,9 @@ Default scheme (only original signals):
 
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
@@ -44,6 +45,8 @@ class ScoreWeights:
     remaining ones absorb the unallocated proportionally.
 
     Default (backward-compatible): semantic=0.4, vagueness=0.4, syntax=0.2
+
+    Raises ValueError if any weight is negative, NaN or infinite.
     """
 
     semantic: float = 0.24
@@ -54,6 +57,15 @@ class ScoreWeights:
     structure: float = 0.20    # structural clarity (always available)
     # Note: when readability and coherence are also enabled, structure=0.175 etc.
     # Weight redistribution handles normalization automatically.
+
+    def __post_init__(self) -> None:
+        # All-zero weights stay valid: they select the unweighted mean fallback.
+        for f in fields(self):
+            value = getattr(self, f.name)
+            if not math.isfinite(value) or value < 0.0:
+                raise ValueError(
+                    f"ScoreWeights.{f.name} must be a finite number of 0 or more, got {value!r}"
+                )
 
     def non_zero_weight_sum(self) -> float:
         """Sum of all weights that are > 0 (for weight redistribution)."""
