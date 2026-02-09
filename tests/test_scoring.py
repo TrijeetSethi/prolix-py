@@ -43,15 +43,16 @@ def test_to_json_returns_the_same_dict_as_to_dict():
 # ---------------------------------------------------------------------------
 
 
-def test_weights_all_nonzero_sum_to_one():
+def test_default_weights_non_zero_sum_includes_structure():
     w = ScoreWeights()
     # Default weights: semantic(0.24) + vagueness(0.24) + syntax(0.12) + structure(0.20)
-    assert abs(w.non_zero_weight_sum() - 0.60) < 0.01
+    assert abs(w.non_zero_weight_sum() - 0.80) < 0.01
 
 
 def test_weights_with_zero_semantic():
     w = ScoreWeights(semantic=0.0, vagueness=0.5, syntax=0.2)
-    assert w.non_zero_weight_sum() == 0.7
+    # vagueness(0.5) + syntax(0.2) + default structure(0.20)
+    assert w.non_zero_weight_sum() == pytest.approx(0.90)
 
 
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf"), -1.0])

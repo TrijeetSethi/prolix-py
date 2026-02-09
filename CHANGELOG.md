@@ -44,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `analyze()` raises a `TypeError` that names the actual type when the text is not a `str`, such as bytes or `None`. Before, NLTK raised an unrelated regular expression error
 - A single string passed as `extra_vague_words` to `analyze()` or `find_vague_hits()` counts as one entry. Before, it was split into characters and had no effect
 - `ScoreWeights` raises `ValueError` when a weight is negative, NaN or infinite. Before, such a weight could make `analyze()` return a clarity score of 100. Setting every weight to 0 is still allowed and selects the unweighted mean of the signals
+- `ScoreWeights.non_zero_weight_sum()` includes the structure weight, so it returns 0.80 for the defaults instead of 0.60. The module, `ScoreWeights` and `analyze()` docstrings now state the real default weights instead of 0.4, 0.4 and 0.2. Scores do not change
 
 ## [0.2.0] — 2025-09-24
 
@@ -55,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `save_primitives()` and `load_primitives()` JSONL helpers
 
 ### Changed
-- Default weights redistributed: structure now has 0.20 weight; semantic/vagueness reduced to maintain total=1.0
+- Default weights redistributed: structure now has 0.20 weight, and semantic, vagueness and syntax were reduced to 0.24, 0.24 and 0.12. The defaults add up to 0.80, and the formula divides by the sum of the weights in use, so they act as 0.30, 0.30, 0.15 and 0.25
 - Readability formula improved: `to_clarity_score()` uses sqrt scaling for better differentiation
 - Vague word penalty normalized: capped at 40% based on unique-word ratio (was unbounded)
 - Syntax penalty normalized: per-sentence rate, capped at 10 points

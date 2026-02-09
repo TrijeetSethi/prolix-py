@@ -8,12 +8,18 @@ feature-gated — when disabled (the default), they contribute zero weight
 and AnalysisResult fields are None (not errors). When enabled, they absorb
 remaining weight proportionally so the formula always sums to a valid score.
 
-Weight scheme (all signals enabled):
-    clarity = 100 - (semantic*0.2 + vagueness*0.15 + syntax*0.05 +
-                     (100-readability)*0.30 + (100-coherence)*0.30)
-    
-Default scheme (only original signals):
-    clarity = 100 - (semantic*0.4 + vagueness*0.4 + syntax*0.2)
+Weighted formula:
+    ambiguity = (semantic*w_semantic + vagueness*w_vagueness + syntax*w_syntax
+                 + (100-structure)*w_structure + (100-readability)*w_readability
+                 + (100-coherence)*w_coherence) / (sum of the counted weights)
+    clarity = 100 - ambiguity, with ambiguity clamped to the range 0 to 100
+
+A weight counts only when it is above 0 and, for structure, readability and
+coherence, only when that signal was computed. The default weights are
+semantic 0.24, vagueness 0.24, syntax 0.12 and structure 0.20, with
+readability and coherence at 0. They add up to 0.80, so after the division
+they act as 0.30, 0.30, 0.15 and 0.25. If no weight counts, ambiguity is the
+unweighted mean of the available signals.
 """
 
 from __future__ import annotations
@@ -37,14 +43,14 @@ from .vague_lexicon import VagueHit, find_vague_hits
 
 @dataclass(frozen=True)
 class ScoreWeights:
-    """Mirrors starter.md's `0.4 * semantic + 0.4 * vagueness + 0.2 * syntax`
-    blend. Extended in Phase B to support optional readability and coherence.
+    """Weights of the signals in the clarity formula.
 
-    When all signals are enabled, weights redistribute so that all
-    six signals sum to 1.0 total weight. When only some are enabled,
-    remaining ones absorb the unallocated proportionally.
-
-    Default (backward-compatible): semantic=0.4, vagueness=0.4, syntax=0.2
+    Defaults: semantic 0.24, vagueness 0.24, syntax 0.12, structure 0.20,
+    readability 0 and coherence 0. The weights do not need to add up to 1,
+    because analyze() divides by the sum of the weights of the signals that
+    are present. The defaults add up to 0.80 and so act as 0.30, 0.30, 0.15
+    and 0.25. If every weight is 0, analyze() uses the unweighted mean of the
+    available signals.
 
     Raises ValueError if any weight is negative, NaN or infinite.
     """
@@ -55,8 +61,6 @@ class ScoreWeights:
     readability: float = 0.0   # optional — set to non-zero to enable
     coherence: float = 0.0     # optional — set to non-zero to enable
     structure: float = 0.20    # structural clarity (always available)
-    # Note: when readability and coherence are also enabled, structure=0.175 etc.
-    # Weight redistribution handles normalization automatically.
 
     def __post_init__(self) -> None:
         # All-zero weights stay valid: they select the unweighted mean fallback.
@@ -70,7 +74,8 @@ class ScoreWeights:
     def non_zero_weight_sum(self) -> float:
         """Sum of all weights that are > 0 (for weight redistribution)."""
         return sum(w for w in [self.semantic, self.vagueness, self.syntax,
-                               self.readability, self.coherence] if w > 0.0)
+                               self.readability, self.coherence, self.structure]
+                   if w > 0.0)
 
 
 @dataclass(frozen=True)
@@ -133,7 +138,8 @@ def analyze(
 
     Args:
         sentence: The sentence to analyze
-        weights: Custom score weights (defaults add up to 1.0 across enabled signals)
+        weights: Custom score weights. The defaults add up to 0.80, and the
+            formula divides by the sum of the weights of the present signals.
         semantic_scorer: Semantic scorer for polysemy analysis
         extra_vague_words: Additional vague words to check against. A single
             string counts as one entry.
