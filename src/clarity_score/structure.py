@@ -130,6 +130,23 @@ def _count_code_blocks(text: str) -> int:
     return count
 
 
+def _strip_fenced_blocks(text: str) -> str:
+    """Remove fenced code blocks, fence lines included.
+
+    Uses the same fence rule as ``_count_code_blocks``, so a block that is
+    never closed runs to the end of the text.  Comment lines such as
+    ``# install`` inside a fence are then not counted as headings.
+    """
+    kept: list[str] = []
+    in_block = False
+    for line in text.split("\n"):
+        if line.strip().startswith("```"):
+            in_block = not in_block
+        elif not in_block:
+            kept.append(line)
+    return "\n".join(kept)
+
+
 # ---------------------------------------------------------------------------
 # Action verb analysis
 # ---------------------------------------------------------------------------
@@ -142,6 +159,9 @@ _ACTION_VERBS = {
     "include", "exclude", "avoid", "use", "follow", "check", "verify",
     "ensure", "provide", "return", "validate", "parse", "render",
     "generate", "format", "transform", "apply", "enable", "disable",
+    "click", "open", "select", "type", "enter", "press", "go", "choose",
+    "navigate", "save", "close", "copy", "paste", "rename", "move", "sort",
+    "download", "upload", "fix", "find", "show", "list",
 }
 
 _SENTENCE_BOUNDARY = re.compile(r"[.!?]\s+[A-Z]")
@@ -166,7 +186,7 @@ def _estimate_action_ratio(text: str) -> float:
         first_word = re.split(r"\s+", stripped.lower())[0]
         # Strip trailing punctuation from first word
         first_word = re.sub(r"[^\w]", "", first_word)
-        if first_word in _ACTION_VERBS or len(first_word) >= 3:
+        if first_word in _ACTION_VERBS:
             action_count += 1
 
     return min(1.0, action_count / max(len(sentences), 1))
@@ -192,11 +212,13 @@ def analyze_structure(text: str) -> StructureReport:
     Returns:
         StructureReport with structural_clarity score [10, 100]
     """
-    heading_count = _count_headings(text)
-    list_items = _count_list_items(text)
+    # Headings, lists and sentences inside fenced code are not document structure.
+    prose = _strip_fenced_blocks(text)
+    heading_count = _count_headings(prose)
+    list_items = _count_list_items(prose)
     code_blocks = _count_code_blocks(text)
-    action_ratio = _estimate_action_ratio(text)
-    max_depth = _max_heading_depth(text)
+    action_ratio = _estimate_action_ratio(prose)
+    max_depth = _max_heading_depth(prose)
 
     # Calculate density metrics (per 100 lines)
     lines = text.split("\n") if text else [""]

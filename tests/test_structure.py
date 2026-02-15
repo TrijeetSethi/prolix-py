@@ -152,10 +152,13 @@ Pass the API key to the configuration file. Set up the OAuth credentials. Ensure
         assert ratio > 0.5  # High action ratio for instructions
 
     def test_mixed_content(self):
-        text = "This is a description of a skill. It creates events when you specify them."
+        text = "This is a description of a skill. Create events when you need them."
         ratio = _estimate_action_ratio(text)
         # Should be moderate
         assert 0.3 <= ratio <= 0.8
+
+    def test_descriptive_prose_has_zero_action_ratio(self):
+        assert _estimate_action_ratio("The weather was nice yesterday afternoon.") == 0.0
 
 
 class TestAnalyzeStructure:
@@ -193,6 +196,25 @@ Requires OAuth credentials.
         assert result.list_item_count >= 1
         assert result.code_block_count >= 1
         assert result.structural_clarity > 25
+
+    def test_fenced_comments_are_not_headings(self):
+        text = """
+## Install
+
+```bash
+# install the package
+pip install clarity-score
+# check the version
+clarity-score --version
+```
+
+## Usage
+Run the command on a file.
+"""
+        result = analyze_structure(text)
+        assert result.heading_count == 2
+        assert result.max_heading_depth == 2
+        assert result.code_block_count == 1
 
     def test_vague_paragraph(self):
         text = """

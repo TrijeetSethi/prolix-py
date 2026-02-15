@@ -46,6 +46,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ScoreWeights` raises `ValueError` when a weight is negative, NaN or infinite. Before, such a weight could make `analyze()` return a clarity score of 100. Setting every weight to 0 is still allowed and selects the unweighted mean of the signals
 - `ScoreWeights.non_zero_weight_sum()` includes the structure weight, so it returns 0.80 for the defaults instead of 0.60. The module, `ScoreWeights` and `analyze()` docstrings now state the real default weights instead of 0.4, 0.4 and 0.2. Scores do not change
 
+### Scoring changes
+- The structure signal counts a sentence as an action sentence only when its first word is a listed action verb. Before, any first word of 3 or more letters counted, so descriptive prose and gibberish got full action credit. Prose that does not start with a listed verb now scores up to 5 points lower at the default weights. The list adds click, open, select, type, enter, press, go, choose, navigate, save, close, copy, paste, rename, move, sort, download, upload, fix, find, show and list. A sentence that starts with go, which has only 2 letters, now scores up to 5 points higher
+- Headings, list items and sentences inside fenced code blocks no longer count toward the structure signal, so a `# comment` line in a shell example is not a heading. Code blocks are still counted
+
 ## [0.2.0] — 2025-09-24
 
 ### Added
