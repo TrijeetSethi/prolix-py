@@ -52,7 +52,7 @@ class ClarityPrimitives:
     syntax_penalty: float              # 0-10 (capped at 10), higher=more ambiguous
     readability_score: Optional[float] # 0-100, higher=easier to read; None if disabled
     coherence: Optional[float]         # 0-100, higher=better flow; None if disabled
-    structural_clarity: Optional[float]# 0-100, higher=well-structured; None if disabled
+    structural_clarity: Optional[float]# 0-100, higher=well-structured; None for single-line text
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -193,10 +193,10 @@ def extract_primitives(
         from .readability import text_to_clarity_score as _rto
         readability_score = _rto(text)
 
-    # 5. Structural clarity (optional)
+    # 5. Structural clarity (only for text with more than one line, as in analyze())
     structural_clarity = None
-    structure_report = _analyze_structure(text)
-    structural_clarity = structure_report.structural_clarity
+    if "\n" in text.strip():
+        structural_clarity = _analyze_structure(text).structural_clarity
 
     # 6. Coherence (feature-gated — embedding-based, optional)
     coherence_val = None

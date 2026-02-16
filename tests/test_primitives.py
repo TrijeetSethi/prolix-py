@@ -21,13 +21,17 @@ class TestExtractPrimitives:
     """Test that primitives are correctly extracted from text."""
 
     def test_simple_sentence(self):
-        prim = extract_primitives("The cat sat on the mat.", include_readability=True)
+        prim = extract_primitives("# Cats\n\nThe cat sat on the mat.", include_readability=True)
         assert 0 <= prim.semantic_ambiguity <= 100
         assert 0 <= prim.specificity <= 100
         assert abs(prim.vagueness - (100 - prim.specificity)) < 0.001
         assert 0 <= prim.syntax_penalty <= 10
         assert prim.readability_score is not None
         assert prim.structural_clarity is not None
+
+    def test_single_line_has_no_structure(self):
+        prim = extract_primitives("The cat sat on the mat.\n", include_readability=True)
+        assert prim.structural_clarity is None
 
     def test_no_readability(self):
         prim = extract_primitives("Hello world.", include_readability=False)

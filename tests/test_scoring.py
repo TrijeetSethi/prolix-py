@@ -109,11 +109,20 @@ def test_vague_penalty_unique_only():
     assert result.vague_hits  # should have some hits
 
 
-def test_structural_clarity_present_for_non_empty_text():
-    """Non-empty text should always get a structural_clarity value."""
+def test_structural_clarity_present_for_multi_line_text():
+    """Text with more than one line gets a structural_clarity value."""
     result = analyze("# My Skill\n\nDo stuff.\n")
     assert result.structural_clarity is not None
     assert 10.0 <= result.structural_clarity <= 100.0
+
+
+def test_structural_clarity_none_for_single_line():
+    """A single line has no markdown layout, so its structure weight is redistributed."""
+    sentence = "The chef stirred the soup with the spoon.\n"
+    result = analyze(sentence)
+    assert result.structural_clarity is None
+    no_structure = analyze(sentence, weights=ScoreWeights(structure=0.0))
+    assert result.clarity_score == pytest.approx(no_structure.clarity_score)
 
 
 def test_readability_score_none_when_not_requested():

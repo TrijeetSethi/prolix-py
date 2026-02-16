@@ -18,8 +18,10 @@ A weight counts only when it is above 0 and, for structure, readability and
 coherence, only when that signal was computed. The default weights are
 semantic 0.24, vagueness 0.24, syntax 0.12 and structure 0.20, with
 readability and coherence at 0. They add up to 0.80, so after the division
-they act as 0.30, 0.30, 0.15 and 0.25. If no weight counts, ambiguity is the
-unweighted mean of the available signals.
+they act as 0.30, 0.30, 0.15 and 0.25. Structure is computed only for text
+with more than one line, so with the defaults a single line scores with 0.4,
+0.4 and 0.2. If no weight counts, ambiguity is the unweighted mean of the
+available signals.
 """
 
 from __future__ import annotations
@@ -49,8 +51,9 @@ class ScoreWeights:
     readability 0 and coherence 0. The weights do not need to add up to 1,
     because analyze() divides by the sum of the weights of the signals that
     are present. The defaults add up to 0.80 and so act as 0.30, 0.30, 0.15
-    and 0.25. If every weight is 0, analyze() uses the unweighted mean of the
-    available signals.
+    and 0.25. Structure is present only for text with more than one line, so
+    with the defaults a single line scores with 0.4, 0.4 and 0.2. If every
+    weight is 0, analyze() uses the unweighted mean of the available signals.
 
     Raises ValueError if any weight is negative, NaN or infinite.
     """
@@ -181,11 +184,16 @@ def analyze(
             # Graceful degradation — leave as None
             pass
 
+    # Structure measures markdown layout, so it is computed only for text with
+    # more than one line. A single line leaves it None and its weight goes to
+    # the other signals.
+    structural_clarity = None
+    if "\n" in sentence.strip():
+        from .structure import analyze_structure as _analyze_structure
+        structural_clarity = _analyze_structure(sentence).structural_clarity
+
     if not words:
         empty_lexical = LexicalReport()
-        # Compute structural clarity even for empty text (may have structure)
-        from .structure import analyze_structure as _analyze_structure
-        structure_report = _analyze_structure(sentence)
         return AnalysisResult(
             sentence=sentence,
             clarity_score=0.0,
@@ -193,7 +201,7 @@ def analyze(
             specificity=0.0,
             readability_score=readability_score,
             context_coherence=context_coherence,
-            structural_clarity=structure_report.structural_clarity,
+            structural_clarity=structural_clarity,
             syntax=syntax_report,
             lexical=empty_lexical,
             vague_hits=vague_hits,
@@ -201,11 +209,6 @@ def analyze(
         )
 
     semantic_ambiguity = semantic_scorer.score(sentence, words)
-
-    # Compute structural clarity (always available — no feature check needed)
-    from .structure import analyze_structure as _analyze_structure
-    structure_report = _analyze_structure(sentence)
-    structural_clarity = structure_report.structural_clarity
 
     # Normalize vague penalty: cap it so it doesn't overwhelm the base specificity.
     # Use unique hit phrases to avoid double-counting repeated vague words,
