@@ -29,7 +29,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from typing import Optional
 from pathlib import Path
 
@@ -77,26 +77,24 @@ class FormulaWeights:
     """Defines a specific weighting combination for computing clarity.
 
     Unlike :class:`~clarity_score.scoring.ScoreWeights` (which controls the
-    internal ``analyze()`` pipeline), this class is lightweight and has NO
-    weight-Redistribution logic — it just maps signal names to weights and
-    whether to invert them (ambiguity scale → 100 - x) before weighting.
+    internal ``analyze()`` pipeline), this class is lightweight: it just maps
+    signal names to weights.  ``apply_formula()`` combines them with the same
+    rule as ``analyze()``, so equal weights give equal scores.
 
     Signal names:
         semantic, vagueness, syntax, readability, coherence, structure
 
     Inversion:
-        Signals on the clarity scale (readability, coherence, structure) must
-        be set with ``invert=True`` so they become ambiguity-weighted before
-        the weighted sum is taken.  Ambiguity signals use ``invert=False``.
+        ``apply_formula()`` turns the clarity scale signals (readability,
+        coherence, structure) into ambiguity as 100 minus the signal before
+        weighting them.
     """
     semantic: float = 0.24
     vagueness: float = 0.24
     syntax: float = 0.12
-    readability: float = 0.0      # set >0 and invert=True to include
+    readability: float = 0.0      # set >0 to include
     coherence: float = 0.0        # same (requires primitives.coherence is not None)
-    structure: float = 0.20       # set >0 and invert=True to include
-
-    _inverted_signals: frozenset = field(default=frozenset())
+    structure: float = 0.20       # set to 0 to leave structure out
 
     def enabled_weight_sum(self) -> float:
         """Sum of all non-zero weights (for normalization)."""
@@ -111,8 +109,8 @@ class FormulaWeights:
 # These are the formulas we want to benchmark across every skill/commit:
 DEFAULT_WEIGHTS = FormulaWeights()          # current default (structure+semantic+vague)
 READABILITY_ENABLED_WEIGHTS = FormulaWeights(readability=0.30, structure=0.20)  # add readability
-NO_STRUCTURE_WEIGHTS = FormulaWeights(semantic=0.30, vagueness=0.30, syntax=0.15, readability=0.25)  # no structure, evenly-ish
-VAGUENESS_HEAVY_WEIGHTS = FormulaWeights(semantic=0.35, vagueness=0.40, syntax=0.10, readability=0.15)  # heavy vague/semantic
+NO_STRUCTURE_WEIGHTS = FormulaWeights(semantic=0.30, vagueness=0.30, syntax=0.15, readability=0.25, structure=0.0)  # no structure, evenly-ish
+VAGUENESS_HEAVY_WEIGHTS = FormulaWeights(semantic=0.35, vagueness=0.40, syntax=0.10, readability=0.15, structure=0.0)  # heavy vague/semantic
 EVEN_DISTRIBUTION_WEIGHTS = FormulaWeights(semantic=0.125, vagueness=0.125, syntax=0.125, readability=0.15, coherence=0.15, structure=0.25)  # evenly-ish
 
 
@@ -225,13 +223,21 @@ def apply_formula(
 
     The ambiguity scale signals (semantic, vagueness, syntax) are kept as-is;
     the clarity scale signals (readability, coherence, structure) are inverted
-    to the ambiguity scale before weighting.
+    to the ambiguity scale before weighting.  As in ``analyze()``, the sum is
+    divided by the weights above 0 of the signals that are present, so the
+    weight of a signal that is None goes to the others.
 
     Returns:
         Clarity score in [0, 100], where higher = more clear.
     """
     w = weights
-    total_weight = w.enabled_weight_sum()
+    total_weight = sum(x for x in (w.semantic, w.vagueness, w.syntax) if x > 0.0)
+    if prim.readability_score is not None and w.readability > 0:
+        total_weight += w.readability
+    if prim.coherence is not None and w.coherence > 0:
+        total_weight += w.coherence
+    if prim.structural_clarity is not None and w.structure > 0:
+        total_weight += w.structure
 
     if total_weight == 0:
         # Unweighted average of all available signals

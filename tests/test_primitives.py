@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 import pytest
 import tempfile
+from dataclasses import fields
 
 from clarity_score.primitives import (
     ClarityPrimitives, FormulaWeights,
@@ -15,6 +16,7 @@ from clarity_score.primitives import (
     _prism_weights, DEFAULT_WEIGHTS,
     NO_STRUCTURE_WEIGHTS,
 )
+from clarity_score.scoring import ScoreWeights, analyze
 
 
 class TestExtractPrimitives:
@@ -93,6 +95,22 @@ class TestApplyFormula:
     def test_no_structure_formula(self, sample_prims):
         score = apply_formula(sample_prims, NO_STRUCTURE_WEIGHTS)
         assert 0 <= score <= 100
+
+
+_AGREEMENT_TEXTS = [
+    "The chef stirred the soup with the spoon.",
+    "Use the thing to do stuff.",
+    "# Deploy\n\n## Steps\n1. Run the build.\n2. Upload the archive to the server.\n",
+]
+
+
+@pytest.mark.parametrize("name,fw", _prism_weights(), ids=[n for n, _ in _prism_weights()])
+@pytest.mark.parametrize("text", _AGREEMENT_TEXTS, ids=["sentence", "vague", "markdown"])
+def test_apply_formula_matches_analyze(name, fw, text):
+    """Every preset gives the score analyze() gives for the same weights."""
+    same = ScoreWeights(**{f.name: getattr(fw, f.name) for f in fields(ScoreWeights)})
+    expected = analyze(text, weights=same, include_readability=True).clarity_score
+    assert apply_formula(extract_primitives(text), fw) == pytest.approx(expected, abs=0.01)
 
 
 class TestApplyAllFormulas:
