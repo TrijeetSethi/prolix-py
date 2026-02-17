@@ -21,7 +21,7 @@ Reference formulas:
     GFI  = 0.4*((words/sentences) + 100*(polysyllabic/words))
     SMOG = 1.043*sqrt(30*(polysyllabic/sentences)) + 3.1291
     ARI  = 4.71*(chars/words) + 0.5*(words/sentences) - 21.43
-    CLI  = 0.0588*(chars/words)*100 - 0.296*(sentences/words)*100 - 15.8
+    CLI  = 0.0588*(letters/words)*100 - 0.296*(sentences/words)*100 - 15.8
 """
 
 from __future__ import annotations
@@ -168,7 +168,7 @@ def count_polysyllabic_words(text: str) -> int:
 
 
 def count_chars_excluding_spaces(text: str) -> int:
-    """Count alphabetic characters (for Coleman-Liau and ARI)."""
+    """Count non-whitespace characters (used by ARI)."""
     return len(re.sub(r'\s', '', text))
 
 
@@ -222,10 +222,13 @@ def automated_readability(sentences: float, words: float, chars: float) -> float
 
 
 def coleman_liau(sentences: float, words: float, chars: float) -> float:
-    """Coleman-Liau Index: 0.0588*(chars/words)*100 - 0.296*(sentences/words)*100 - 15.8."""
+    """Coleman-Liau Index: 0.0588*(letters/words)*100 - 0.296*(sentences/words)*100 - 15.8.
+
+    ``chars`` is the number of letters, not counting digits or punctuation.
+    """
     if words == 0:
         return 0.0
-    letters = (chars / words) * 100.0  # characters per 100 words
+    letters = (chars / words) * 100.0  # letters per 100 words
     s = (sentences / words) * 100.0    # sentences per 100 words
     return 0.0588 * letters - 0.296 * s - 15.8
 
@@ -243,6 +246,7 @@ def compute_readability_metrics(text: str) -> ReadabilityMetrics:
     syllables = count_syllables_in_text(text)
     polysyllabic = count_polysyllabic_words(text)
     chars = count_chars_excluding_spaces(text)
+    letters = sum(1 for c in text if c.isalpha())
 
     return ReadabilityMetrics(
         flesch_reading_ease=flesch_reading_ease(sentences, words_f, syllables),
@@ -250,7 +254,7 @@ def compute_readability_metrics(text: str) -> ReadabilityMetrics:
         gunning_fog_index=gunning_fog_index(sentences, words_f, polysyllabic),
         smog_index=smog_index(sentences, polysyllabic),
         automated_readability=automated_readability(sentences, words_f, chars),
-        coleman_liau_index=coleman_liau(sentences, words_f, chars),
+        coleman_liau_index=coleman_liau(sentences, words_f, letters),
     )
 
 

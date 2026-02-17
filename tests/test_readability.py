@@ -114,6 +114,12 @@ class TestFormulaCorrectness:
         result = smog_index(1, 0)
         assert abs(result - 3.1291) < 0.1
 
+    def test_coleman_liau_counts_letters_only(self):
+        # 33 letters, 8 words, 1 sentence; the final period is not a letter.
+        # CLI = 0.0588*412.5 - 0.296*12.5 - 15.8 = 4.755
+        metrics = compute_readability_metrics("The chef stirred the soup with the spoon.")
+        assert metrics.coleman_liau_index == pytest.approx(4.755, abs=0.01)
+
     def test_formula_ranges(self):
         """All formulas should return values within expected ranges."""
         sentence = "This is a very long complicated sentence that contains many polysyllabic words and exceeds normal length"
