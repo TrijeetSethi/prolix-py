@@ -5,8 +5,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
+import gc
+import json
 import pytest
 import tempfile
+import warnings
 from dataclasses import fields
 
 from clarity_score.primitives import (
@@ -169,6 +172,28 @@ class TestSaveLoadRoundTrip:
                 assert abs(new.semantic_ambiguity - orig.semantic_ambiguity) < 0.01
         finally:
             tmp_path.unlink()
+
+    def test_load_ignores_unknown_keys(self, tmp_path):
+        """A record with an extra key and no optional fields still loads."""
+        prims = {"semantic_ambiguity": 55.0, "specificity": 30.0, "vagueness": 70.0,
+                 "syntax_penalty": 1.0, "new_signal": 12.0}
+        path = tmp_path / "p.jsonl"
+        path.write_text(json.dumps({"commit_hash": "abc123", "primitives": prims}) + "\n",
+                        encoding="utf-8")
+        loaded = load_primitives(path)[0]["primitives"]
+        assert isinstance(loaded, ClarityPrimitives)
+        assert loaded.semantic_ambiguity == 55.0
+        assert loaded.readability_score is None
+
+    def test_load_closes_file(self, tmp_path):
+        path = tmp_path / "p.jsonl"
+        prim = extract_primitives("Hello world.", include_readability=True)
+        save_primitives(path, [{"commit_hash": "abc123", "primitives": prim}])
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always", ResourceWarning)
+            load_primitives(path)
+            gc.collect()
+        assert not [w for w in caught if issubclass(w.category, ResourceWarning)]
 
 
 class TestPrismWeights:

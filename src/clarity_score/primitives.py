@@ -62,10 +62,20 @@ class ClarityPrimitives:
 
     @staticmethod
     def from_dict(d: dict) -> "ClarityPrimitives":
-        return ClarityPrimitives(**{k: d[k] for k in ["semantic_ambiguity", "specificity",
-                                                       "vagueness", "syntax_penalty",
-                                                       "readability_score", "coherence",
-                                                       "structural_clarity"]})
+        """Build primitives from a dict, ignoring keys that are not fields.
+
+        The four float fields are required.  A missing optional field
+        (readability_score, coherence or structural_clarity) becomes None.
+        """
+        return ClarityPrimitives(
+            semantic_ambiguity=d["semantic_ambiguity"],
+            specificity=d["specificity"],
+            vagueness=d["vagueness"],
+            syntax_penalty=d["syntax_penalty"],
+            readability_score=d.get("readability_score"),
+            coherence=d.get("coherence"),
+            structural_clarity=d.get("structural_clarity"),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -286,17 +296,17 @@ def apply_all_formulas(
 # ---------------------------------------------------------------------------
 
 def save_primitives(path: Path, rows: list[dict], fmt: str = "jsonl") -> None:
-    """Save a list of (metadata, primitives) tuples to a JSONL file.
+    """Save a list of row dicts to a JSONL file, one row per line.
 
     Each row is a dict with keys:
         - commit_hash (str)
-        - metadata  (optional arbitrary dict — e.g. author, message)
+        - metadata  (optional arbitrary dict, such as author and message)
         - primitives (ClarityPrimitives or dict)
 
     Output format per line::
 
-        {"commit":"abc123","author":"Jane Doe","msg":"Add skill X",
-         "prims":{"semantic_ambiguity":55.0,"specificity":30.0,...}}
+        {"commit_hash":"abc123","metadata":{"author":"Jane Doe","msg":"Add skill X"},
+         "primitives":{"semantic_ambiguity":55.0,"specificity":30.0,...}}
     """
     with open(path, "w", encoding="utf-8") as f:
         for row in rows:
@@ -308,17 +318,22 @@ def save_primitives(path: Path, rows: list[dict], fmt: str = "jsonl") -> None:
 
 
 def load_primitives(path: Path) -> list[dict]:
-    """Load primitives from a JSONL file produced by ``save_primitives``."""
+    """Load primitives from a JSONL file produced by ``save_primitives``.
+
+    Keys in ``primitives`` that are not ClarityPrimitives fields are ignored,
+    so a file written by a newer version still loads.
+    """
     rows = []
-    for line in open(path, encoding="utf-8"):
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        row = json.loads(line)
-        prims = row.get("primitives")
-        if isinstance(prims, dict):
-            row["primitives"] = ClarityPrimitives(**prims)
-        rows.append(row)
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            row = json.loads(line)
+            prims = row.get("primitives")
+            if isinstance(prims, dict):
+                row["primitives"] = ClarityPrimitives.from_dict(prims)
+            rows.append(row)
     return rows
 
 __all__ = [
