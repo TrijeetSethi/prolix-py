@@ -442,9 +442,9 @@ def compare_models(
     """Score all files with multiple coherence models for benchmarking.
 
     Convenience function that runs ``clarify()`` once per model and returns
-    results grouped by model name.  The first model in the list is scored
-    without any coherence scorer (baseline), then subsequent models each
-    load their embedding model.
+    results grouped by model name.  The first entry in the list is scored
+    without any coherence scorer and its results are keyed ``"<baseline>"``,
+    then subsequent models each load their embedding model.
 
     Args:
         model_names: HuggingFace model names to compare
@@ -454,8 +454,8 @@ def compare_models(
         include_readability: Include readability metrics (default True).
 
     Returns:
-        Dict mapping model name → list of ``(Path, AnalysisResult)`` tuples.
-        When ``len(model_names) == 1``, the key is ``"<baseline>"``.
+        Dict mapping ``"<baseline>"`` and each later model name to a list of
+        ``(Path, AnalysisResult)`` tuples.
 
     Raises:
         ImportError: If any embedding model fails to load and is not the first (baseline).
@@ -491,6 +491,6 @@ def compare_models(
             )
             mode_results = [(input_path, result)]
 
-        all_results[model_name] = mode_results
+        all_results["<baseline>" if idx == 0 else model_name] = mode_results
 
     return all_results

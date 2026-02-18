@@ -237,6 +237,76 @@ class TestMainDispatch:
 
 
 # ============================================================
+# Model comparison (`clarity-score-compare`)
+# ============================================================
+
+
+class _LengthScorer:
+    """Coherence scorer stub that needs no embedding model."""
+
+    def __init__(self, model_name: str = "stub"):
+        pass
+
+    def score(self, sentence, tokens):
+        return float(min(len(sentence), 100))
+
+
+class _MissingScorer:
+    """Coherence scorer stub that fails like a missing sentence-transformers."""
+
+    def __init__(self, model_name: str = "stub"):
+        raise ImportError("sentence-transformers is not installed")
+
+
+class TestModelCompare:
+    """Tests for the model comparison statistics and command."""
+
+    SCORES = [("a", 10.0), ("b", 20.0), ("c", 30.0), ("d", 40.0)]
+
+    def test_identical_scores_agree_fully(self):
+        from clarity_score.model_compare import _compute_comparison
+        m = _compute_comparison("x", "y", self.SCORES, self.SCORES, [], [])
+        assert m.rank_agreement_pct == 100.0
+        assert m.pearson_r_clarity is None
+
+    def test_rank_agreement_is_symmetric(self):
+        from clarity_score.model_compare import _compute_comparison
+        other = [("a", 30.0), ("b", 10.0), ("c", 20.0), ("d", 40.0)]
+        ab = _compute_comparison("x", "y", self.SCORES, other, [], []).rank_agreement_pct
+        ba = _compute_comparison("y", "x", other, self.SCORES, [], []).rank_agreement_pct
+        assert ab == ba == pytest.approx(4 / 6 * 100)
+
+    def test_benchmark_scores_each_jsonl_entry(self, tmp_path, monkeypatch, capsys):
+        import clarity_score.semantic_coherence as sc
+        from clarity_score.model_compare import compare_models_benchmark
+        monkeypatch.setattr(sc, "MiniLMCoherenceScorer", _LengthScorer)
+        batch = tmp_path / "batch.jsonl"
+        batch.write_text(
+            '{"path": "one.md", "content": "Run the build."}\n'
+            '{"path": "two.md", "content": "Upload the archive to the server."}\n',
+            encoding="utf-8",
+        )
+        result = compare_models_benchmark(["m1", "m2"], batch)
+        assert result.n_documents == 2
+        assert result.comparisons[0].rank_agreement_pct == 100.0
+
+    def test_compare_models_keys_baseline(self):
+        from clarity_score.clarify import compare_models
+        skill_md = FIXTURE_DIR / "specific" / "SKILL.md"
+        assert list(compare_models(["all-MiniLM-L6-v2"], skill_md)) == ["<baseline>"]
+
+    def test_compare_exits_1_when_no_model_loads(self, tmp_path, monkeypatch, capsys):
+        import clarity_score.semantic_coherence as sc
+        from clarity_score.cli import main
+        monkeypatch.setattr(sc, "MiniLMCoherenceScorer", _MissingScorer)
+        output = tmp_path / "comparison.json"
+        rc = main(["compare", "--target", str(FIXTURE_DIR), "--output", str(output)])
+        assert rc == 1
+        assert "no comparison ran" in capsys.readouterr().err
+        assert not output.exists()
+
+
+# ============================================================
 # JSON output consistency
 # ============================================================
 

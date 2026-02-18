@@ -77,8 +77,8 @@ class ComparisonMetrics:
     total_runtime_ms: float = 0.0        # Total wall-clock ms
     overhead_ratio: float = 1.0           # model_b / model_a runtime ratio
 
-    # Clarity score agreement (using full clarity scores, not just coherence)
-    pearson_r_clarity: float = 0.0
+    # Clarity score agreement: not computed, always None
+    pearson_r_clarity: float | None = None
 
 
 @dataclass
@@ -111,7 +111,7 @@ class BenchmarkResult:
                     "model_b_avg_time_ms": round(m.model_b_avg_time_ms, 1),
                     "total_runtime_ms": round(m.total_runtime_ms, 1),
                     "overhead_ratio": round(m.overhead_ratio, 2),
-                    "pearson_r_clarity": round(m.pearson_r_clarity, 4),
+                    "pearson_r_clarity": m.pearson_r_clarity,
                 }
                 for m in self.comparisons
             ],
@@ -208,6 +208,9 @@ def compare_models_benchmark(
         BenchmarkResult with all metrics and raw scores.
     """
     import sys
+    from .clarify import (
+        _discover_batch_jsonl, _discover_directory, _score_file, _strip_frontmatter,
+    )
     from .semantic_coherence import MiniLMCoherenceScorer
 
     # -------------------------------------------------------
@@ -218,18 +221,28 @@ def compare_models_benchmark(
     all_results: dict[str, list[tuple[Path, Any]]] = {}
     timings_by_model: dict[str, list[float]] = {}
 
-    # Discover file list once (shared across all models)
+    # Discover file list once (shared across all models). For a JSONL batch,
+    # inline_content holds each entry's "content", or None to read its path.
     input_path = Path(path)
+    inline_content: list[str | None]
     if input_path.is_dir():
-        from .clarify import _discover_directory
         discovered = sorted(_discover_directory(input_path, pattern))
+        inline_content = [None] * len(discovered)
     elif input_path.suffix == ".jsonl":
-        # Batch JSONL — collect entries first
-        from .clarify import _discover_batch_jsonl
         entries = _discover_batch_jsonl(input_path)
-        discovered = [Path(e.get("path", f"entry_{i}")) for i, e in enumerate(entries)]
+        discovered = []
+        for i, e in enumerate(entries):
+            entry_path = Path(e.get("path", f"entry_{i}"))
+            # Resolve a relative path against the batch file first, as clarify() does.
+            if not entry_path.is_absolute() and (input_path.parent / entry_path).is_file():
+                entry_path = input_path.parent / entry_path
+            discovered.append(entry_path)
+        inline_content = [
+            _strip_frontmatter(e["content"]) if e.get("content") else None for e in entries
+        ]
     else:
         discovered = [input_path]
+        inline_content = [None]
 
     if not discovered:
         raise ValueError(f"No files found matching pattern '{pattern}'")
@@ -250,24 +263,16 @@ def compare_models_benchmark(
         elapsed_times: list[float] = []
 
         # Score each document individually to measure per-file timing
-        if input_path.is_dir():
-            from .clarify import _score_file
-            for file_path in discovered:
-                t0 = time.time()
-                result = _score_file(file_path, include_readability=include_readability, coherence_scorer=scorer)
-                elapsed_times.append(time.time() - t0)
-                results_list.append((file_path, result))
-        else:
+        for file_path, content in zip(discovered, inline_content):
             t0 = time.time()
-            from .clarify import _read_content
             result = _score_file(
-                input_path, 
-                content=_read_content(input_path),
+                file_path,
+                content=content,
                 include_readability=include_readability,
                 coherence_scorer=scorer,
             )
             elapsed_times.append(time.time() - t0)
-            results_list.append((input_path, result))
+            results_list.append((file_path, result))
 
         all_results[model_name] = results_list
         timings_by_model[model_name] = elapsed_times
@@ -346,21 +351,22 @@ def _compute_comparison(
             n_documents=len(common_docs),
         )
 
-    # Rank agreement: what % of pairs do both models agree on ordering?
-    agreements = 0
-    disagreements = 0
+    # Rank agreement: concordant / (concordant + discordant) document pairs,
+    # leaving out pairs that either model ties. With no such pairs it is 100.
+    concordant = 0
+    discordant = 0
     docs = sorted(common_docs)
     for i in range(len(docs)):
         for j in range(i + 1, len(docs)):
-            a_i, b_i = doc_to_a[docs[i]], doc_to_b[docs[i]]
-            a_j, b_j = doc_to_a[docs[j]], doc_to_b[docs[j]]
-            if (a_i > a_j) == (b_i > b_j):  # Same ordering
-                agreements += 1
-            elif (a_i < a_j) and (b_i > b_j):  # Different
-                disagreements += 1
+            diff_a = doc_to_a[docs[i]] - doc_to_a[docs[j]]
+            diff_b = doc_to_b[docs[i]] - doc_to_b[docs[j]]
+            if diff_a * diff_b > 0:
+                concordant += 1
+            elif diff_a * diff_b < 0:
+                discordant += 1
 
-    total_pairs = agreements + max(disagreements, 1)
-    rank_agreement = agreements / total_pairs * 100.0
+    ordered_pairs = concordant + discordant
+    rank_agreement = concordant / ordered_pairs * 100.0 if ordered_pairs else 100.0
 
     # MAE and MSE on raw scores
     errors = [(a - b) for a, b in zip(coh_a, coh_b)]
@@ -385,19 +391,6 @@ def _compute_comparison(
     avg_time_b = (sum(times_b) / len(times_b) * 1000) if times_b else 0.0
     total_ms = (sum(times_a) + sum(times_b)) * 1000
 
-    # Clarity score comparison (already included in analysis results)
-    result_to_clarity: dict[str, float] = {}
-    for file_path, result in _score_results(model_a_name, scores_a):
-        result_to_clarity[file_path] = getattr(result, "clarity_score", 0.0)
-
-    # Compute clarity correlation between models (only meaningful if both are baseline)
-    pearson_r_clarity = 0.0
-    if model_a_name in ["<baseline>", model_b_name] and model_b_name in ["<baseline>", model_a_name]:
-        clarity_a = [result_to_clarity[d] for d in docs]
-        clarity_b = [result_to_clarity.get(d, 0.0) for d in docs]
-        if len(clarity_a) > 2:
-            pearson_r_clarity = _pearson(clarity_a, clarity_b)
-
     return ComparisonMetrics(
         model_a_name=model_a_name,
         model_b_name=model_b_name,
@@ -415,16 +408,7 @@ def _compute_comparison(
         model_b_avg_time_ms=avg_time_b,
         total_runtime_ms=total_ms,
         overhead_ratio=(avg_time_b / avg_time_a) if avg_time_a > 0 else 1.0,
-        pearson_r_clarity=pearson_r_clarity,
     )
-
-
-
-
-
-def _score_results(model_name: str, scores: list[tuple[str, float]]) -> Sequence[tuple[Path, Any]]:
-    """Stub to resolve type — not used directly."""
-    return []
 
 
 # ============================================================

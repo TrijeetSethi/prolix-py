@@ -113,8 +113,9 @@ def entry_compare(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--target", "-t", required=True, help="Directory containing skill files")
     parser.add_argument(
-        "--model", dest="model", action="append", default=["all-MiniLM-L6-v2", "all-mpnet-base-v2"],
-        help="HuggingFace model name (can specify multiple)",
+        "--model", dest="model", action="append", default=None,
+        help=("HuggingFace model name, repeat to compare several "
+              "(default: all-MiniLM-L6-v2 and all-mpnet-base-v2)"),
     )
     parser.add_argument("--pattern", "-p", default="**/SKILL.md", help="Glob pattern (default: **/SKILL.md)")
     parser.add_argument("--output", "-o", required=True, help="Output JSON file path")
@@ -364,11 +365,15 @@ def _cmd_compare(args: argparse.Namespace) -> int:
 
     print(f"\nTotal benchmark time: {total:.1f}s")
 
+    if not result.comparisons:
+        print("Error: no comparison ran, because fewer than two models were scored",
+              file=sys.stderr)
+        return 1
+
     # Print recommendations
-    if result.comparisons:
-        print("\n" + "=" * 60)
-        rec = generate_recommendation(result.comparisons)
-        print(f"RECOMMENDATION: {rec}")
+    print("\n" + "=" * 60)
+    rec = generate_recommendation(result.comparisons)
+    print(f"RECOMMENDATION: {rec}")
 
     # Export to JSON
     output_path = Path(args.output)
