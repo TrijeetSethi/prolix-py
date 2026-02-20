@@ -6,6 +6,8 @@
 """
 
 import importlib.util
+import sys
+import types
 
 import pytest
 
@@ -174,6 +176,39 @@ class TestGracefulDegradation:
             MiniLMCoherenceScorer()
         message = str(excinfo.value).lower()
         assert "semantic-coherence" in message or "feature" in message
+
+
+class TestModelRevision:
+    """The default model loads from a pinned Hub commit."""
+
+    @pytest.fixture
+    def loads(self, monkeypatch):
+        calls = []
+
+        class FakeSentenceTransformer:
+            def __init__(self, name, revision=None):
+                calls.append((name, revision))
+
+            def eval(self):
+                pass
+
+        module = types.ModuleType("sentence_transformers")
+        module.SentenceTransformer = FakeSentenceTransformer
+        monkeypatch.setitem(sys.modules, "sentence_transformers", module)
+        return calls
+
+    def test_default_model_is_pinned(self, loads):
+        from clarity_score.semantic_coherence import (
+            _PINNED_MINILM_REVISION, MiniLMCoherenceScorer,
+        )
+        MiniLMCoherenceScorer()
+        MiniLMCoherenceScorer("all-mpnet-base-v2")
+        MiniLMCoherenceScorer(revision="main")
+        assert loads == [
+            ("all-MiniLM-L6-v2", _PINNED_MINILM_REVISION),
+            ("all-mpnet-base-v2", None),
+            ("all-MiniLM-L6-v2", "main"),
+        ]
 
 
 class TestIntegrationWithScorer:

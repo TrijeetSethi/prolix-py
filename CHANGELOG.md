@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In directory and batch modes `clarify()` logs a file or entry that fails to score as a warning on the `clarity_score.clarify` logger instead of printing to stderr. The file is still left out of the results, and the docstrings no longer promise a zero-score result for it
 - `clarity-score-dir` prints plain ASCII: `ok` and `error` instead of check marks, crosses and arrows, a line of hyphens above the summary, and no low variance hint
 - `FormulaWeights` no longer has the unused `_inverted_signals` field, so the constructor no longer accepts it. `apply_formula()` inverts readability, coherence and structure automatically, as before
+- `MiniLMCoherenceScorer` loads all-MiniLM-L6-v2 from a pinned Hugging Face Hub commit, so coherence scores do not change when the upstream model does. A new `revision` argument selects another commit, branch or tag. Other models still load their latest revision unless `revision` is given. The docstrings and the `semantic-coherence` extra state the model size as about 90 MB instead of 24 MB
 
 ### Fixed
 - Removed duplicate `_score_file` function in clarify.py (S-01)

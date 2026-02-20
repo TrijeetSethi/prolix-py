@@ -39,7 +39,7 @@ dev = [
 # Zero additional dependencies — pure Python math on top of stdlib.
 readability = []
 # Semantic coherence scoring via sentence embeddings (MiniLM-L6-v2).
-# Requires sentence-transformers for lazy model download (~24MB, cached).
+# Requires sentence-transformers for lazy model download (about 90 MB, cached).
 semantic-coherence = [
     "sentence-transformers>=3.0",
 ]

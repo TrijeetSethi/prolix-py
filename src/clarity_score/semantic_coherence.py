@@ -11,7 +11,7 @@ NOT derived from or vendored from spanIQ or any other project. All code reimplem
 from scratch using the embedding model as a black box.
 
 Usage:
-    scorer = MiniLMCoherenceScorer()  # loads model lazily (~24MB, cached)
+    scorer = MiniLMCoherenceScorer()  # loads the model (about 90 MB, cached)
     tokens = tag_sentence("The cat sat.")
     score = scorer.score("The cat sat.", tokens)  # returns ~85-95 for coherent sentences
 
@@ -23,6 +23,11 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 
+
+# Hugging Face Hub commit of sentence-transformers/all-MiniLM-L6-v2 that the
+# default model is loaded from, so its scores do not change with upstream edits.
+_PINNED_MINILM_REVISION = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+_MINILM_NAMES = ("all-MiniLM-L6-v2", "sentence-transformers/all-MiniLM-L6-v2")
 
 # Content word POS tag prefixes (nouns, verbs, adjectives, adverbs)
 _CONTENT_TAG_PREFIXES = ("NN", "VB", "JJ", "RB")
@@ -100,14 +105,17 @@ class MiniLMCoherenceScorer:
     """Embedding-based coherence scorer using all-MiniLM-L6-v2.
 
     The model is loaded lazily on first instantiation and cached internally
-    to avoid repeated downloads. Model size: ~24MB. Downloaded to the
+    to avoid repeated downloads. Model size: about 90 MB. Downloaded to the
     standard sentence-transformers cache directory (~/.cache/huggingface/).
+
+    all-MiniLM-L6-v2 is loaded from a pinned Hub commit unless *revision* is
+    given. Other models load the revision passed, or the latest one.
 
     Requires 'sentence-transformers' package. Install with:
         pip install clarity-score[semantic-coherence]
     """
 
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+    def __init__(self, model_name: str = "all-MiniLM-L6-v2", revision: str | None = None):
         # Lazy import to avoid ImportError on first-class load when feature not installed
         try:
             from sentence_transformers import SentenceTransformer  # noqa: F811
@@ -118,7 +126,9 @@ class MiniLMCoherenceScorer:
                 "(or install sentence-transformers directly)\n"
             ) from exc
 
-        self._model = SentenceTransformer(model_name)
+        if revision is None and model_name in _MINILM_NAMES:
+            revision = _PINNED_MINILM_REVISION
+        self._model = SentenceTransformer(model_name, revision=revision)
         self._model.eval()  # disable dropout, use deterministic embeddings
 
     # Maximum content words to embed per call for performance.
