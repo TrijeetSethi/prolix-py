@@ -85,6 +85,21 @@ def test_single_string_extra_vague_word_counts_as_one_entry():
     assert [hit.phrase for hit in result.vague_hits] == ["gizmo"]
 
 
+def test_vague_phrase_does_not_match_across_punctuation():
+    result = analyze("Choose the merge sort. Of the two outputs, keep the first.")
+    assert result.vague_hits == []
+
+
+def test_vague_phrase_with_one_letter_word_matches():
+    result = analyze("We need a lot of tests.")
+    assert [hit.phrase for hit in result.vague_hits] == ["a lot"]
+
+
+def test_empty_extra_vague_word_is_ignored():
+    result = analyze("Keep the file. Run the tests.", extra_vague_words=["", "  "])
+    assert result.vague_hits == []
+
+
 def test_single_word_sentence_scores_validly():
     """A single word should not crash and should produce a valid score."""
     result = analyze("hello")

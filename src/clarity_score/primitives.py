@@ -167,6 +167,7 @@ def extract_primitives(
     """
     from .lexical import analyze_lexical
     from .scorer import WordnetPolysemyScorer
+    from .scoring import _vague_tokens
     from .syntax import analyze_syntax, tag_sentence
     from .vague_lexicon import find_vague_hits
     from .structure import analyze_structure as _analyze_structure
@@ -180,7 +181,7 @@ def extract_primitives(
 
     # 2. Vagueness (specificity from wordnet depth + vague hit penalty)
     lexical_report = analyze_lexical(words)
-    vague_hits = find_vague_hits(words)
+    vague_hits = find_vague_hits(_vague_tokens(tagged))
 
     unique_vague = set(h.phrase.lower() for h in vague_hits)
     vague_ratio = min(len(unique_vague) / max(len(set(w.lower() for w in words)), 1), 1.0)

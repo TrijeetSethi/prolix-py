@@ -50,12 +50,16 @@ def find_vague_hits(
     """Greedily matches the longest vague-lexicon entry (words or
     multi-word phrases, e.g. "kind of") starting at each token position.
 
-    A single string passed as extra_vague_words counts as one entry."""
+    An empty string in words never matches, so it stops a phrase from
+    spanning it. A single string passed as extra_vague_words counts as one
+    entry. Runs of whitespace in an extra entry count as one space, and an
+    empty entry is ignored."""
     if isinstance(extra_vague_words, str):
         extra_vague_words = [extra_vague_words]
     lexicon = _default_lexicon()
     if extra_vague_words:
-        lexicon = lexicon | {w.strip().lower() for w in extra_vague_words}
+        extra = {" ".join(w.lower().split()) for w in extra_vague_words}
+        lexicon = lexicon | (extra - {""})
     if not lexicon:
         return []
 

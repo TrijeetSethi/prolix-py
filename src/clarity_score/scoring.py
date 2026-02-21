@@ -27,7 +27,7 @@ available signals.
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Optional
 
@@ -41,6 +41,16 @@ from .lexical import LexicalReport, analyze_lexical
 from .scorer import SemanticScorer, WordnetPolysemyScorer
 from .syntax import SyntaxReport, analyze_syntax, tag_sentence
 from .vague_lexicon import VagueHit, find_vague_hits
+
+
+def _vague_tokens(tagged: Sequence[tuple[str, str]]) -> list[str]:
+    """Return the tokens that vague phrases are matched against.
+
+    Every alphabetic token is kept, including one-letter words such as the
+    'a' in 'a lot'. Every other token, such as punctuation, becomes an empty
+    string, so a phrase cannot match across it.
+    """
+    return [token if token.isalpha() else "" for token, _tag in tagged]
 
 
 @dataclass(frozen=True)
@@ -162,12 +172,13 @@ def analyze(
 
     tagged = tag_sentence(sentence)
     # Filter to alpha tokens that are at least 2 chars long
-    # (single letters like 'a', 'A', 'I' are not useful for polysemy analysis)
+    # (single letters like 'a', 'A', 'I' are not useful for polysemy analysis).
+    # Vague phrases are matched over every token instead, see _vague_tokens.
     words = [token for token, _tag in tagged if len(token) >= 2 and token.isalpha()]
 
     syntax_report = analyze_syntax(tagged)
     lexical_report = analyze_lexical(words)
-    vague_hits = find_vague_hits(words, extra_vague_words=extra_vague_words)
+    vague_hits = find_vague_hits(_vague_tokens(tagged), extra_vague_words=extra_vague_words)
 
     # Compute readability if requested (always available — no feature check needed)
     readability_score = None

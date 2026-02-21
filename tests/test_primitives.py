@@ -47,6 +47,12 @@ class TestExtractPrimitives:
         assert prim.semantic_ambiguity == 0.0
         assert prim.specificity == 0.0
 
+    def test_vague_phrase_with_one_letter_word_counts(self):
+        text = "We need a lot of tests."
+        prim = extract_primitives(text, include_readability=False)
+        assert prim.specificity == pytest.approx(analyze(text).specificity, abs=0.001)
+        assert prim.specificity < extract_primitives("We need tests.").specificity
+
     def test_long_text(self):
         text = "The " * 50 + "quick brown fox jumps over the lazy dog. " * 20
         prim = extract_primitives(text, include_readability=True)
