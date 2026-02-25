@@ -21,9 +21,10 @@ from typing import Protocol
 
 class SemanticScorer(Protocol):
     def score(self, sentence: str, words: Sequence[str]) -> float:
-        """Returns a semantic-ambiguity score, roughly on a 0-100+ scale
-        (see `WordnetPolysemyScorer` for the reference implementation's
-        range); higher means more ambiguous."""
+        """Returns a semantic-ambiguity score; higher means more ambiguous.
+        The value is clamped to 0 to 100 by the pipeline: `analyze()` and
+        `extract_primitives()` limit it to that range, so a scorer may return
+        more, as `WordnetPolysemyScorer` does for very polysemous words."""
         ...
 
 

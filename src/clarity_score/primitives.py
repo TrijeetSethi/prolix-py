@@ -177,7 +177,9 @@ def extract_primitives(
     words = [token for token, _tag in tagged if len(token) >= 2 and token.isalpha()]
 
     # 1. Semantic ambiguity (word polysemy)
-    semantic_ambiguity = semantic_scorer.score(text, words) if words else 0.0
+    semantic_ambiguity = (
+        min(100.0, max(0.0, semantic_scorer.score(text, words))) if words else 0.0
+    )
 
     # 2. Vagueness (specificity from wordnet depth + vague hit penalty)
     lexical_report = analyze_lexical(words)

@@ -1,6 +1,7 @@
 """Tests for scoring.py — weighted formula, normalization, and edge cases."""
 import pytest
 
+from clarity_score.primitives import extract_primitives
 from clarity_score.scoring import ScoreWeights, analyze
 
 
@@ -98,6 +99,26 @@ def test_vague_phrase_with_one_letter_word_matches():
 def test_empty_extra_vague_word_is_ignored():
     result = analyze("Keep the file. Run the tests.", extra_vague_words=["", "  "])
     assert result.vague_hits == []
+
+
+def test_semantic_ambiguity_is_clamped_to_100():
+    result = analyze("Break cut.")
+    assert result.semantic_ambiguity <= 100.0
+    assert extract_primitives("Break cut.").semantic_ambiguity <= 100.0
+
+
+class _ConstantScorer:
+    def __init__(self, value):
+        self.value = value
+
+    def score(self, sentence, words):
+        return self.value
+
+
+@pytest.mark.parametrize("value,expected", [(500.0, 100.0), (-5.0, 0.0)])
+def test_custom_semantic_scorer_is_clamped(value, expected):
+    result = analyze("Replace the kitchen faucet.", semantic_scorer=_ConstantScorer(value))
+    assert result.semantic_ambiguity == expected
 
 
 def test_single_word_sentence_scores_validly():

@@ -219,7 +219,7 @@ def analyze(
             weights=weights,
         )
 
-    semantic_ambiguity = semantic_scorer.score(sentence, words)
+    semantic_ambiguity = min(100.0, max(0.0, semantic_scorer.score(sentence, words)))
 
     # Normalize vague penalty: cap it so it doesn't overwhelm the base specificity.
     # Use unique hit phrases to avoid double-counting repeated vague words,
