@@ -106,6 +106,12 @@ class AnalysisResult:
     context_coherence: Optional[float] = None
     structural_clarity: Optional[float] = None
 
+    @property
+    def word_count(self) -> int:
+        """Number of scored words, the tokens of two or more letters. It is
+        0 when the text has none, and clarity_score is then 0.0."""
+        return len(self.lexical.words)
+
     def to_dict(self) -> dict:
         """Return the result as a dict that json.dumps accepts. Scores are
         rounded to two decimals, and optional fields appear only when set."""
@@ -114,6 +120,7 @@ class AnalysisResult:
             "clarity_score": round(self.clarity_score, 2),
             "semantic_ambiguity": round(self.semantic_ambiguity, 2),
             "specificity": round(self.specificity, 2),
+            "word_count": self.word_count,
             "avg_word_senses": round(self.lexical.avg_senses, 2),
             "avg_wordnet_depth": round(self.lexical.avg_depth, 2),
             "syntax_ambiguity_hits": [
@@ -160,7 +167,9 @@ def analyze(
         coherence_scorer: Coherence scorer instance. If None and coherence enabled, uses default MiniLMCoherenceScorer.
 
     Returns:
-        AnalysisResult with clarity score and all applicable sub-scores
+        AnalysisResult with clarity score and all applicable sub-scores.
+        Text with no word of two or more letters, such as '', '!!!' or '42',
+        scores 0.0 and has a word_count of 0.
 
     Raises:
         TypeError: If sentence is not a str, for example bytes or None.

@@ -53,6 +53,7 @@ class ClarityPrimitives:
     readability_score: Optional[float] # 0-100, higher=easier to read; None if disabled
     coherence: Optional[float]         # 0-100, higher=better flow; None if disabled
     structural_clarity: Optional[float]# 0-100, higher=well-structured; None for single-line text
+    word_count: Optional[int] = None   # words of 2 or more letters; None in older records
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -65,7 +66,8 @@ class ClarityPrimitives:
         """Build primitives from a dict, ignoring keys that are not fields.
 
         The four float fields are required.  A missing optional field
-        (readability_score, coherence or structural_clarity) becomes None.
+        (readability_score, coherence, structural_clarity or word_count)
+        becomes None.
         """
         return ClarityPrimitives(
             semantic_ambiguity=d["semantic_ambiguity"],
@@ -75,6 +77,7 @@ class ClarityPrimitives:
             readability_score=d.get("readability_score"),
             coherence=d.get("coherence"),
             structural_clarity=d.get("structural_clarity"),
+            word_count=d.get("word_count"),
         )
 
 
@@ -225,6 +228,7 @@ def extract_primitives(
         readability_score=round(readability_score, 2) if readability_score is not None else None,
         coherence=round(coherence_val, 2) if coherence_val is not None else None,
         structural_clarity=round(structural_clarity, 2) if structural_clarity is not None else None,
+        word_count=len(words),
     )
 
 
@@ -240,9 +244,15 @@ def apply_formula(
     divided by the weights above 0 of the signals that are present, so the
     weight of a signal that is None goes to the others.
 
+    Text with no word of two or more letters, such as '', '!!!' or '42',
+    scores 0.0 with word_count 0, as in ``analyze()``.  Primitives without a
+    word_count, such as records from older versions, are combined as usual.
+
     Returns:
         Clarity score in [0, 100], where higher = more clear.
     """
+    if prim.word_count == 0:
+        return 0.0
     w = weights
     total_weight = sum(x for x in (w.semantic, w.vagueness, w.syntax) if x > 0.0)
     if prim.readability_score is not None and w.readability > 0:

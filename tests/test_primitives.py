@@ -60,6 +60,30 @@ class TestExtractPrimitives:
         assert prim.semantic_ambiguity >= 0
 
 
+@pytest.mark.parametrize("text", ["", "!!!", "42"])
+def test_text_without_scorable_words_scores_zero(text):
+    result = analyze(text)
+    prim = extract_primitives(text)
+    assert result.clarity_score == 0.0
+    assert result.word_count == 0
+    assert prim.word_count == 0
+    assert apply_formula(prim, DEFAULT_WEIGHTS) == 0.0
+
+
+def test_word_count_counts_words_of_two_or_more_letters():
+    text = "We need a lot of tests."
+    assert analyze(text).word_count == 5
+    assert analyze(text).to_dict()["word_count"] == 5
+    assert extract_primitives(text).word_count == 5
+
+
+def test_primitives_without_word_count_still_combine():
+    prim = ClarityPrimitives.from_dict({"semantic_ambiguity": 55.0, "specificity": 30.0,
+                                        "vagueness": 70.0, "syntax_penalty": 1.0})
+    assert prim.word_count is None
+    assert apply_formula(prim, DEFAULT_WEIGHTS) > 0.0
+
+
 class TestFormulaWeights:
     """Test FormulaWeights configuration."""
 
