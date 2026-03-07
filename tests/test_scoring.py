@@ -4,7 +4,7 @@ import unicodedata
 import pytest
 
 from clarity_score.primitives import extract_primitives
-from clarity_score.scoring import ScoreWeights, analyze
+from clarity_score.scoring import ScoreWeights, _normalize_text, analyze
 
 
 def test_clarity_score_in_range():
@@ -212,3 +212,8 @@ def test_normalized_twins_score_the_same(plain, variant):
     assert {**result.to_dict(), "sentence": plain} == expected
     assert result.vague_hits == analyze(plain).vague_hits
     assert extract_primitives(variant) == extract_primitives(plain)
+
+
+def test_normalize_text_maps_every_typographic_character_to_ascii():
+    text = "\u2018a\u2019 b\u02bcc \u201cd\u201d e\u2010f g\u2011h Cafe\u0301"
+    assert _normalize_text(text) == "'a' b'c \"d\" e-f g-h Caf\u00e9"
