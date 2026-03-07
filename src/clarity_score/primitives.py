@@ -155,7 +155,7 @@ def extract_primitives(
 
     Returns a frozen :class:`ClarityPrimitives` dataclass containing every
     sub-score on a 0-100 scale (ambiguity-weighted for bad signals, clarity-
-    weighted for good ones).
+    weighted for good ones).  The text is normalized as in ``analyze()``.
 
     Args:
         text: The document text to analyze.
@@ -170,12 +170,13 @@ def extract_primitives(
     """
     from .lexical import analyze_lexical
     from .scorer import WordnetPolysemyScorer
-    from .scoring import _vague_tokens
+    from .scoring import _normalize_text, _vague_tokens
     from .syntax import analyze_syntax, tag_sentence
     from .vague_lexicon import find_vague_hits
     from .structure import analyze_structure as _analyze_structure
 
     semantic_scorer = WordnetPolysemyScorer()
+    text = _normalize_text(text)
     tagged = tag_sentence(text)
     words = [token for token, _tag in tagged if len(token) >= 2 and token.isalpha()]
 

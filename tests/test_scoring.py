@@ -1,4 +1,6 @@
 """Tests for scoring.py — weighted formula, normalization, and edge cases."""
+import unicodedata
+
 import pytest
 
 from clarity_score.primitives import extract_primitives
@@ -179,3 +181,34 @@ def test_json_includes_optional_fields_when_present():
     result = analyze("The cat sat.", include_readability=True)
     data = result.to_json()
     assert "readability_score" in data
+
+
+_ASCII_TEXT = (
+    "# Setup\n\nDon't edit the config file. It's in the repo root, and you shouldn't "
+    "move it. Say \"stop\" when a well-known test fails; don't skip them.\n"
+)
+_TYPOGRAPHIC_TEXT = (
+    _ASCII_TEXT.replace("'", "\u2019")
+    .replace('"stop"', "\u201cstop\u201d")
+    .replace("well-known", "well\u2010known")
+)
+_NFC_TEXT = "Caf\u00e9 menus are somewhat nice, and the r\u00e9sum\u00e9 is kind of long."
+
+
+@pytest.mark.parametrize(
+    "plain,variant",
+    [
+        (_ASCII_TEXT, _TYPOGRAPHIC_TEXT),
+        (_ASCII_TEXT, _ASCII_TEXT.replace("'", "\u02bc")),
+        (_NFC_TEXT, unicodedata.normalize("NFD", _NFC_TEXT)),
+    ],
+    ids=["curly", "modifier-apostrophe", "nfd"],
+)
+def test_normalized_twins_score_the_same(plain, variant):
+    assert plain != variant
+    expected = analyze(plain, include_readability=True).to_dict()
+    result = analyze(variant, include_readability=True)
+    assert result.sentence == variant
+    assert {**result.to_dict(), "sentence": plain} == expected
+    assert result.vague_hits == analyze(plain).vague_hits
+    assert extract_primitives(variant) == extract_primitives(plain)

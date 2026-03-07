@@ -27,6 +27,7 @@ available signals.
 from __future__ import annotations
 
 import math
+import unicodedata
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Optional
@@ -41,6 +42,27 @@ from .lexical import LexicalReport, analyze_lexical
 from .scorer import SemanticScorer, WordnetPolysemyScorer
 from .syntax import SyntaxReport, analyze_syntax, tag_sentence
 from .vague_lexicon import VagueHit, find_vague_hits
+
+
+# Typographic apostrophes, quotes and hyphens map to their ASCII forms, which
+# the tokenizer and tagger handle, for example to split "don't" into "do" and
+# "n't".
+_TYPOGRAPHIC_TO_ASCII = str.maketrans({
+    "\u2018": "'",
+    "\u2019": "'",
+    "\u02bc": "'",
+    "\u201c": '"',
+    "\u201d": '"',
+    "\u2010": "-",
+    "\u2011": "-",
+})
+
+
+def _normalize_text(text: str) -> str:
+    """Return text in Unicode NFC form with typographic apostrophes, double
+    quotes and hyphens replaced by their ASCII forms, so text from a word
+    processor scores the same as the same text typed in ASCII."""
+    return unicodedata.normalize("NFC", text).translate(_TYPOGRAPHIC_TO_ASCII)
 
 
 def _vague_tokens(tagged: Sequence[tuple[str, str]]) -> list[str]:
@@ -156,6 +178,10 @@ def analyze(
 ) -> AnalysisResult:
     """Analyze a sentence's clarity with optional additional signals.
 
+    The text is converted to Unicode NFC form, and typographic apostrophes,
+    double quotes and hyphens are read as their ASCII forms before scoring.
+    AnalysisResult.sentence keeps the text as given.
+
     Args:
         sentence: The sentence to analyze
         weights: Custom score weights. The defaults add up to 0.80, and the
@@ -179,7 +205,9 @@ def analyze(
     weights = weights or ScoreWeights()
     semantic_scorer = semantic_scorer or WordnetPolysemyScorer()
 
-    tagged = tag_sentence(sentence)
+    # Every signal reads the normalized text; the result keeps the original.
+    text = _normalize_text(sentence)
+    tagged = tag_sentence(text)
     # Filter to alpha tokens that are at least 2 chars long
     # (single letters like 'a', 'A', 'I' are not useful for polysemy analysis).
     # Vague phrases are matched over every token instead, see _vague_tokens.
@@ -193,13 +221,13 @@ def analyze(
     readability_score = None
     if include_readability:
         from .readability import text_to_clarity_score as _rto
-        readability_score = _rto(sentence)
+        readability_score = _rto(text)
 
     # Compute coherence if scorer provided (requires semantic-coherence feature)
     context_coherence = None
     if coherence_scorer is not None:
         try:
-            context_coherence = coherence_scorer.score(sentence, tagged)
+            context_coherence = coherence_scorer.score(text, tagged)
         except ImportError:
             # Graceful degradation — leave as None
             pass
@@ -208,9 +236,9 @@ def analyze(
     # more than one line. A single line leaves it None and its weight goes to
     # the other signals.
     structural_clarity = None
-    if "\n" in sentence.strip():
+    if "\n" in text.strip():
         from .structure import analyze_structure as _analyze_structure
-        structural_clarity = _analyze_structure(sentence).structural_clarity
+        structural_clarity = _analyze_structure(text).structural_clarity
 
     if not words:
         empty_lexical = LexicalReport()
@@ -228,7 +256,7 @@ def analyze(
             weights=weights,
         )
 
-    semantic_ambiguity = min(100.0, max(0.0, semantic_scorer.score(sentence, words)))
+    semantic_ambiguity = min(100.0, max(0.0, semantic_scorer.score(text, words)))
 
     # Normalize vague penalty: cap it so it doesn't overwhelm the base specificity.
     # Use unique hit phrases to avoid double-counting repeated vague words,
@@ -243,7 +271,7 @@ def analyze(
 
     # Normalize syntax penalty: count hits per sentence so long documents
     # don't get penalized disproportionately. Cap at 10 (a reasonable max).
-    sentence_count = max(1, len(re.findall(r'[.!?]+', sentence)))
+    sentence_count = max(1, len(re.findall(r'[.!?]+', text)))
     hit_rate_per_sentence = syntax_report.ambiguity_score / sentence_count
     syntax_penalty = min(hit_rate_per_sentence * 25, 10)
 
