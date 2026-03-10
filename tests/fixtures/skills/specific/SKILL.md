@@ -1,3 +1,7 @@
+---
+name: specific
+description: Creates, lists, updates and deletes Google Calendar events through the Google Calendar API v3. Use when a user authenticated with OAuth 2.0 asks to schedule, change or cancel an event.
+---
 # Calendar Skill
 
 ## Overview
