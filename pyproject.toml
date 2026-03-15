@@ -26,7 +26,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "nltk>=3.9",
+    "nltk>=3.9.1",
     "wn>=1.0",
 ]
 
