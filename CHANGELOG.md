@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `FormulaWeights` no longer has the unused `_inverted_signals` field, so the constructor no longer accepts it. `apply_formula()` inverts readability, coherence and structure automatically, as before
 - `MiniLMCoherenceScorer` loads all-MiniLM-L6-v2 from a pinned Hugging Face Hub commit, so coherence scores do not change when the upstream model does. A new `revision` argument selects another commit, branch or tag. Other models still load their latest revision unless `revision` is given. The docstrings and the `semantic-coherence` extra state the model size as about 90 MB instead of 24 MB
 - The package requires nltk 3.9.1 or newer. With nltk 3.9.0, `import clarity_score` raises `LookupError` unless the NLTK wordnet corpus is installed
+- Building the package requires hatchling 1.27 or newer, the first version that writes the `License-Expression` and `License-File` metadata PyPI accepts. The two license classifiers are removed because the `MIT OR Apache-2.0` license expression replaces them
 
 ### Fixed
 - Removed duplicate `_score_file` function in clarify.py (S-01)

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.25"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
@@ -14,8 +14,6 @@ keywords = ["clarity", "sentences", "natural-language", "wordnet", "linguistics"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -63,9 +61,6 @@ include = [
     "LICENSE-MIT",
     "LICENSE-APACHE-2.0",
 ]
-
-[tool.hatch.build.targets.wheel.package-data]
-"clarity_score" = ["data/*.txt", "py.typed"]
 
 [tool.ruff]
 line-length = 100
