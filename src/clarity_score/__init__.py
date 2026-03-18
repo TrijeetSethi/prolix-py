@@ -10,7 +10,6 @@ Usage::
     print(result.clarity_score)  # → ~47/100
 
 Optional features (install with extras):
-    - readability: Flesch-Kincaid, Gunning Fog, SMOG formulas (zero deps)
     - semantic-coherence: embedding-based contextual coherence (requires sentence-transformers)
 """
 

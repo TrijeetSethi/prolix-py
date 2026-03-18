@@ -33,16 +33,16 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.6",
 ]
-# Readability metrics (Flesch-Kincaid, Gunning Fog, SMOG, etc.)
-# Zero additional dependencies — pure Python math on top of stdlib.
+# Readability metrics are always available. This extra installs nothing and is
+# kept as a no-op so that installs naming it keep working.
 readability = []
 # Semantic coherence scoring via sentence embeddings (MiniLM-L6-v2).
 # Requires sentence-transformers for lazy model download (about 90 MB, cached).
 semantic-coherence = [
     "sentence-transformers>=3.0",
 ]
-# Convenience extra that enables everything
-all = ["clarity-score[dev,readability,semantic-coherence]"]
+# Convenience extra that enables every runtime feature. Development tools stay in dev.
+all = ["clarity-score[readability,semantic-coherence]"]
 
 [project.urls]
 Homepage = "https://github.com/treejay/vague"
