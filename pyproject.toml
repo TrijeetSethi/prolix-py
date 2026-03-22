@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "clarity-score"
-version = "0.2.0"
+dynamic = ["version"]
 description = "Scores a sentence's clarity via syntactic-ambiguity, WordNet-based specificity, and vague-word heuristics"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
@@ -54,6 +54,9 @@ Changelog = "https://github.com/treejay/vague/blob/main/python/CHANGELOG.md"
 clarity-score = "clarity_score.cli:entry_single"
 clarity-score-dir = "clarity_score.cli:entry_dir"
 clarity-score-compare = "clarity_score.cli:entry_compare"
+
+[tool.hatch.version]
+path = "src/clarity_score/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/clarity_score"]

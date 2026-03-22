@@ -15,7 +15,7 @@ Optional features (install with extras):
 
 from __future__ import annotations
 
-__version__: str = "0.2.0"
+__version__ = "0.2.0"
 
 from .lexical import LexicalReport, WordLexicalInfo, analyze_lexical
 from .scorer import SemanticScorer, WordnetPolysemyScorer
