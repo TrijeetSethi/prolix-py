@@ -10,7 +10,10 @@ from clarity_score import _nltk_data
 from clarity_score.lexical import analyze_lexical, lookup_word
 
 SRC = Path(__file__).resolve().parents[1] / "src"
-FIXTURE_DIR = Path(__file__).resolve().parents[2] / "fixtures" / "skills"
+# An sdist ships the shared fixtures in tests/fixtures. A checkout keeps them at the repo root.
+_LOCAL_FIXTURES = Path(__file__).resolve().parent / "fixtures"
+_REPO_FIXTURES = Path(__file__).resolve().parents[2] / "fixtures"
+FIXTURE_DIR = (_LOCAL_FIXTURES if _LOCAL_FIXTURES.is_dir() else _REPO_FIXTURES) / "skills"
 
 
 def test_polysemous_word_has_multiple_senses():

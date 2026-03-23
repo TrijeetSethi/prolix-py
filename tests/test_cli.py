@@ -10,17 +10,14 @@ from pathlib import Path
 
 import pytest
 
-# Use the package source directly to avoid needing an installed package.
-src = Path(__file__).resolve().parents[1] / "src"
-sys.path.insert(0, str(src))
-
-from clarity_score.clarify import clarify  # noqa: E402
-from clarity_score.cli import entry_dir, entry_single  # noqa: E402
+from clarity_score.clarify import clarify
+from clarity_score.cli import entry_dir, entry_single
 
 
-# Fixtures are at repo root, not inside python/
+# An sdist ships the shared fixtures in tests/fixtures. A checkout keeps them at the repo root.
 REPO_ROOT = Path(__file__).resolve().parents[2]
-FIXTURE_DIR = REPO_ROOT / "fixtures" / "skills"
+_LOCAL_FIXTURES = Path(__file__).resolve().parent / "fixtures"
+FIXTURE_DIR = (_LOCAL_FIXTURES if _LOCAL_FIXTURES.is_dir() else REPO_ROOT / "fixtures") / "skills"
 
 
 # ============================================================
@@ -80,7 +77,6 @@ class TestSingleFileCLI:
             "PYTHONUTF8": "0",
             "PYTHONCOERCECLOCALE": "0",
             "LC_ALL": "C",
-            "PYTHONPATH": os.pathsep.join(filter(None, [str(src), os.environ.get("PYTHONPATH")])),
         }
         proc = subprocess.run(
             [sys.executable, "-m", "clarity_score.cli", str(skill_md), "--json"],
@@ -178,7 +174,6 @@ class TestDirCLI:
         env = {
             **os.environ,
             "PYTHONIOENCODING": "ascii",
-            "PYTHONPATH": os.pathsep.join(filter(None, [str(src), os.environ.get("PYTHONPATH")])),
         }
         proc = subprocess.run(
             [sys.executable, "-m", "clarity_score.cli", "dir", str(FIXTURE_DIR)],
@@ -318,9 +313,8 @@ class TestJSONOutput:
         result = entry_single(["The quick brown fox.", "--json"])
         assert result == 0
         captured = subprocess.run(
-            [sys.executable, "-c", f"""
+            [sys.executable, "-c", """
 import json, sys
-sys.path.insert(0, '{src}')
 from clarity_score.cli import entry_single
 import io
 old = sys.stdout

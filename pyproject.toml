@@ -58,6 +58,9 @@ clarity-score-compare = "clarity_score.cli:entry_compare"
 [tool.hatch.version]
 path = "src/clarity_score/__init__.py"
 
+[tool.hatch.build.targets.sdist.force-include]
+"../fixtures" = "tests/fixtures"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/clarity_score"]
 include = [

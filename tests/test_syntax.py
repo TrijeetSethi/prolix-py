@@ -41,7 +41,10 @@ def test_empty_text_writes_nothing_to_stdout(text, capsys):
     assert result.syntax.hits == []
 
 
-_SKILLS_DIR = Path(__file__).resolve().parents[2] / "fixtures" / "skills"
+# An sdist ships the shared fixtures in tests/fixtures. A checkout keeps them at the repo root.
+_LOCAL_FIXTURES = Path(__file__).resolve().parent / "fixtures"
+_REPO_FIXTURES = Path(__file__).resolve().parents[2] / "fixtures"
+_SKILLS_DIR = (_LOCAL_FIXTURES if _LOCAL_FIXTURES.is_dir() else _REPO_FIXTURES) / "skills"
 
 
 def _whole_stream_hits(tagged):
