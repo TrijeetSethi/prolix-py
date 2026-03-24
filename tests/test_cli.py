@@ -109,7 +109,7 @@ class TestSingleFileCLI:
 
     def test_directory_exits_2(self, tmp_path, capsys):
         assert entry_single([str(tmp_path), "--json"]) == 2
-        assert "is a directory, use clarity-score-dir" in capsys.readouterr().err
+        assert "is a directory, use clarity-score dir" in capsys.readouterr().err
 
     def test_missing_markdown_file_exits_2(self, tmp_path, capsys):
         assert entry_single([str(tmp_path / "missing.md"), "--json"]) == 2
@@ -125,12 +125,12 @@ class TestSingleFileCLI:
 
 
 # ============================================================
-# Directory scanning (new `clarity-score-dir`)
+# Directory scanning (`clarity-score dir`)
 # ============================================================
 
 
 class TestDirCLI:
-    """Tests for the `clarity-score-dir` subcommand."""
+    """Tests for the `clarity-score dir` subcommand."""
 
     def test_dir_basic(self, capsys):
         """Directory scan prints each file and summary."""
@@ -216,6 +216,46 @@ class TestMainDispatch:
             "--output", "/dev/null",
         ])
         assert result == 0
+
+    def test_main_dir_default_pattern(self, capsys):
+        from clarity_score.cli import main
+        assert main(["dir", str(FIXTURE_DIR)]) == 0
+        assert "Found 2" in capsys.readouterr().out
+
+    def test_main_double_dash_scores_the_word_dir(self, capsys):
+        from clarity_score.cli import main
+        assert main(["--", "dir"]) == 0
+        assert "Sentence: 'dir'" in capsys.readouterr().out
+
+    def test_main_dir_version(self, capsys):
+        from clarity_score import __version__
+        from clarity_score.cli import main
+        with pytest.raises(SystemExit) as exc_info:
+            main(["dir", "--version"])
+        assert exc_info.value.code == 0
+        assert capsys.readouterr().out.strip() == f"clarity-score dir {__version__}"
+
+    def test_python_m_version(self):
+        from clarity_score import __version__
+        proc = subprocess.run(
+            [sys.executable, "-m", "clarity_score", "--version"],
+            capture_output=True, encoding="utf-8",
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert proc.stdout.strip() == f"clarity-score {__version__}"
+
+    def test_installed_scripts_run_the_dispatcher(self):
+        """The installed clarity-score script is main(), so its subcommands work."""
+        from importlib.metadata import PackageNotFoundError, distribution
+        try:
+            dist = distribution("clarity-score")
+        except PackageNotFoundError:
+            pytest.skip("clarity-score is not installed")
+        scripts = {ep.name: ep.value for ep in dist.entry_points if ep.group == "console_scripts"}
+        assert scripts == {
+            "clarity-score": "clarity_score.cli:main",
+            "clarity-score-dir": "clarity_score.cli:entry_dir",
+        }
 
     def test_main_dir_jsonl_pattern(self, tmp_path, capsys):
         """A discovered .jsonl file is scored as one file, not as a batch."""

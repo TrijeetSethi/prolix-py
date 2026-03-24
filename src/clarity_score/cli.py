@@ -1,13 +1,19 @@
 """Command-line interface for clarity_score.
 
 Usage:
-    # Analyze a single sentence or file
+    # Score a single sentence or file
     clarity-score "The cat sat on the mat."
     clarity-score my-skill.md --json
 
-    # Score all skills in a directory (new subcommand)
-    clarity-score-dir skills/
-    clarity-score-dir /path/to/skills/ --output results.csv
+    # Score every matching file in a directory
+    clarity-score dir skills/
+    clarity-score dir /path/to/skills/ --output results.csv
+
+    # Print the version
+    clarity-score --version
+
+python -m clarity_score runs the same command. clarity-score-dir is an alias
+of clarity-score dir. To score the word dir itself, run clarity-score -- dir.
 """
 
 from __future__ import annotations
@@ -21,6 +27,8 @@ import time
 import warnings
 from collections.abc import Callable
 from pathlib import Path
+
+from . import __version__
 
 __all__ = ["main", "entry_single", "entry_dir", "entry_compare"]
 
@@ -36,10 +44,11 @@ _TEXT_FILE_SUFFIXES = (".md", ".markdown", ".txt")
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Top-level entry point — dispatches to subcommand handlers.
+    """Run the ``clarity-score`` command and dispatch to its subcommands.
 
-    Supports both the legacy `clarity-score "sentence"` usage and the new
-    subcommands via the ``dir`` and ``compare`` keywords as the first argument.
+    A first argument of ``dir`` runs ``entry_dir()`` and ``compare`` runs
+    ``entry_compare()``. Any other arguments score one sentence or file with
+    ``entry_single()``. Arguments after ``--`` are never taken as a subcommand.
     The ``compare`` subcommand calls ``entry_compare()``, which is deprecated and
     emits a ``DeprecationWarning``. It will be removed in clarity-score 0.4.0.
     """
@@ -67,6 +76,7 @@ def entry_single(argv: list[str] | None = None) -> int:
         prog="clarity-score",
         description=__doc__.strip(),
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("sentence", help="the sentence or file to analyze")
     parser.add_argument("--json", action="store_true", help="print machine-readable JSON")
     parser.add_argument("--readability", "-r", action="store_true", help="include readability metrics (Flesch-Kincaid, Gunning Fog, SMOG)")
@@ -84,11 +94,12 @@ def entry_single(argv: list[str] | None = None) -> int:
 
 
 def entry_dir(argv: list[str] | None = None) -> int:
-    """Entry point for `clarity-score-dir` — directory scanning."""
+    """Entry point for ``clarity-score dir`` and its ``clarity-score-dir`` alias."""
     parser = argparse.ArgumentParser(
-        prog="clarity-score-dir",
+        prog="clarity-score dir",
         description="Score all files in a directory.",
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("target", help="Directory containing skill files")
     parser.add_argument("--pattern", "-p", default="**/SKILL.md", help="Glob pattern (default: **/SKILL.md)")
     parser.add_argument("--output", "-o", help="Output file (CSV or JSON)")
@@ -118,6 +129,7 @@ def entry_compare(argv: list[str] | None = None) -> int:
             "experimental research tool will be removed in clarity-score 0.4.0."
         ),
     )
+    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("--target", "-t", required=True, help="Directory containing skill files")
     parser.add_argument(
         "--model", dest="model", action="append", default=None,
@@ -179,10 +191,10 @@ def _cmd_single(args: argparse.Namespace) -> int:
         # text is longer than the file name limit, so treat it as text.
         is_file = is_dir = False
     if is_dir:
-        print(f"error: {args.sentence} is a directory, use clarity-score-dir", file=sys.stderr)
+        print(f"error: {args.sentence} is a directory, use clarity-score dir", file=sys.stderr)
         return _EXIT_BAD_INPUT
     if is_file:
-        # Read like clarify() and clarity-score-dir: UTF-8, front matter stripped.
+        # Read like clarify() and clarity-score dir: UTF-8, front matter stripped.
         try:
             text = _read_content(sent_path)
         except (OSError, UnicodeDecodeError) as exc:
@@ -242,7 +254,7 @@ def _cmd_single(args: argparse.Namespace) -> int:
 
 
 def _cmd_dir(args: argparse.Namespace) -> int:
-    """Handle the `clarity-score-dir` subcommand."""
+    """Handle the ``clarity-score dir`` subcommand."""
     from .clarify import _discover_directory, _score_file
 
     skills_path = Path(args.target)

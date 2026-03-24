@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `clarify()` takes `on_error="skip"` (the default) or `on_error="raise"`. With `"raise"`, directory and batch modes raise the first error from a file or entry instead of skipping it. Any other value raises `ValueError`
 - `AnalysisResult.to_dict()` returns the result as a dict. `to_json()` returns the same dict and is kept for compatibility
 - `AnalysisResult.word_count` is the number of scored words, the tokens of two or more letters, and `to_dict()` and `clarity-score --json` include it as `word_count`. `ClarityPrimitives` has a matching `word_count` field at the end, which is `None` for a record written by an older version
+- `clarity-score dir PATH` scores every matching file in a directory, and `clarity-score-dir` stays as an alias of it. `python -m clarity_score` runs the `clarity-score` command, and every command takes `--version`
 
 ### Changed
 - Updated minimum Python version to 3.10 (using PEP 604 union syntax)
@@ -28,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The package requires nltk 3.9.1 or newer. With nltk 3.9.0, `import clarity_score` raises `LookupError` unless the NLTK wordnet corpus is installed
 - Building the package requires hatchling 1.27 or newer, the first version that writes the `License-Expression` and `License-File` metadata PyPI accepts. The two license classifiers are removed because the `MIT OR Apache-2.0` license expression replaces them
 - The `all` extra installs only runtime features, so it no longer installs pytest and ruff. The `readability` extra installs nothing, because readability metrics are always available, and is kept so that installs naming it keep working
+- The installed `clarity-score` command runs `clarity_score.cli.main()`, so a first argument of `dir` or `compare` selects that subcommand. To score the word `dir` or `compare` itself, pass it after `--`, as in `clarity-score -- dir`
 
 ### Deprecated
 - Model comparison is deprecated and will be removed in 0.4.0, because it is an experimental research tool. `clarity_score.compare_models()`, `clarity_score.model_compare.compare_models_benchmark()`, `clarity_score.cli.entry_compare()` and `python -m clarity_score.cli compare` still work and emit a `DeprecationWarning`

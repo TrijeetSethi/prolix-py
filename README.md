@@ -47,8 +47,8 @@ clarity-score "Make a peanut butter sandwich" --json
 clarity-score my-skill.md
 
 # Directory scan (default: **/SKILL.md)
-clarity-score-dir skills/ --output results.csv
-clarity-score-dir /path/to/skills/ -p "**/*.md" --readability
+clarity-score dir skills/ --output results.csv
+clarity-score dir /path/to/skills/ -p "**/*.md" --readability
 ```
 
 ## API Reference
