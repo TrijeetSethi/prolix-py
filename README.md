@@ -49,12 +49,6 @@ clarity-score my-skill.md
 # Directory scan (default: **/SKILL.md)
 clarity-score-dir skills/ --output results.csv
 clarity-score-dir /path/to/skills/ -p "**/*.md" --readability
-
-# Compare coherence models
-clarity-score-compare \
-    --model all-MiniLM-L6-v2 --model all-mpnet-base-v2 \
-    --target skills/ \
-    --output comparison.json
 ```
 
 ## API Reference

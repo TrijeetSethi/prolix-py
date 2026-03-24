@@ -232,7 +232,7 @@ class TestMainDispatch:
 
 
 # ============================================================
-# Model comparison (`clarity-score-compare`)
+# Model comparison (deprecated `compare` subcommand)
 # ============================================================
 
 
@@ -281,21 +281,28 @@ class TestModelCompare:
             '{"path": "two.md", "content": "Upload the archive to the server."}\n',
             encoding="utf-8",
         )
-        result = compare_models_benchmark(["m1", "m2"], batch)
+        with pytest.warns(DeprecationWarning, match="removed in clarity-score 0.4.0"):
+            result = compare_models_benchmark(["m1", "m2"], batch)
         assert result.n_documents == 2
         assert result.comparisons[0].rank_agreement_pct == 100.0
 
     def test_compare_models_keys_baseline(self):
         from clarity_score.clarify import compare_models
         skill_md = FIXTURE_DIR / "specific" / "SKILL.md"
-        assert list(compare_models(["all-MiniLM-L6-v2"], skill_md)) == ["<baseline>"]
+        with pytest.warns(DeprecationWarning, match="removed in clarity-score 0.4.0") as record:
+            results = compare_models(["all-MiniLM-L6-v2"], skill_md)
+        assert list(results) == ["<baseline>"]
+        # The warning points at the caller, not at clarity_score.
+        assert record[0].filename == __file__
 
     def test_compare_exits_1_when_no_model_loads(self, tmp_path, monkeypatch, capsys):
         import clarity_score.semantic_coherence as sc
         from clarity_score.cli import main
         monkeypatch.setattr(sc, "MiniLMCoherenceScorer", _MissingScorer)
         output = tmp_path / "comparison.json"
-        rc = main(["compare", "--target", str(FIXTURE_DIR), "--output", str(output)])
+        with pytest.warns(DeprecationWarning, match="removed in clarity-score 0.4.0") as record:
+            rc = main(["compare", "--target", str(FIXTURE_DIR), "--output", str(output)])
+        assert [w.category for w in record].count(DeprecationWarning) == 1
         assert rc == 1
         assert "no comparison ran" in capsys.readouterr().err
         assert not output.exists()

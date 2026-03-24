@@ -8,12 +8,6 @@ Usage:
     # Score all skills in a directory (new subcommand)
     clarity-score-dir skills/
     clarity-score-dir /path/to/skills/ --output results.csv
-
-    # Compare MiniLM vs MPNet coherence models (new subcommand)
-    clarity-score-compare \
-        --model all-MiniLM-L6-v2 --model all-mpnet-base-v2 \
-        --target skills/ \
-        --output comparison.json
 """
 
 from __future__ import annotations
@@ -24,6 +18,7 @@ import json
 import statistics as _stats
 import sys
 import time
+import warnings
 from collections.abc import Callable
 from pathlib import Path
 
@@ -45,6 +40,8 @@ def main(argv: list[str] | None = None) -> int:
 
     Supports both the legacy `clarity-score "sentence"` usage and the new
     subcommands via the ``dir`` and ``compare`` keywords as the first argument.
+    The ``compare`` subcommand calls ``entry_compare()``, which is deprecated and
+    emits a ``DeprecationWarning``. It will be removed in clarity-score 0.4.0.
     """
     if argv is None:
         argv = sys.argv[1:]
@@ -106,10 +103,20 @@ def entry_dir(argv: list[str] | None = None) -> int:
 
 
 def entry_compare(argv: list[str] | None = None) -> int:
-    """Entry point for `clarity-score-compare` — model comparison."""
+    """Run the deprecated model comparison command.
+
+    Model comparison is an experimental research tool. This function emits a
+    ``DeprecationWarning`` and will be removed in clarity-score 0.4.0.
+    """
+    from .model_compare import _warn_deprecated
+
+    _warn_deprecated("The compare subcommand of clarity_score.cli")
     parser = argparse.ArgumentParser(
-        prog="clarity-score-compare",
-        description="Compare coherence models on a set of documents.",
+        prog="python -m clarity_score.cli compare",
+        description=(
+            "Compare coherence models on a set of documents. Deprecated: this "
+            "experimental research tool will be removed in clarity-score 0.4.0."
+        ),
     )
     parser.add_argument("--target", "-t", required=True, help="Directory containing skill files")
     parser.add_argument(
@@ -336,7 +343,7 @@ def _cmd_dir(args: argparse.Namespace) -> int:
 
 
 def _cmd_compare(args: argparse.Namespace) -> int:
-    """Handle the `clarity-score-compare` subcommand."""
+    """Handle the deprecated ``compare`` subcommand."""
     from .model_compare import compare_models_benchmark, BenchmarkResult, generate_recommendation
 
     target_path = Path(args.target)
@@ -353,14 +360,19 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     print()
 
     t0 = time.time()
-    result: BenchmarkResult = compare_models_benchmark(
-        model_names=model_names,
-        path=target_path,
-        pattern=pattern,
-        include_readability=args.readability,
-        output_csv=None,
-        output_json=None,  # We handle JSON output ourselves
-    )
+    with warnings.catch_warnings():
+        # entry_compare() has already warned that model comparison is deprecated.
+        warnings.filterwarnings(
+            "ignore", r"compare_models_benchmark\(\) is deprecated", DeprecationWarning,
+        )
+        result: BenchmarkResult = compare_models_benchmark(
+            model_names=model_names,
+            path=target_path,
+            pattern=pattern,
+            include_readability=args.readability,
+            output_csv=None,
+            output_json=None,  # We handle JSON output ourselves
+        )
     total = time.time() - t0
 
     print(f"\nTotal benchmark time: {total:.1f}s")

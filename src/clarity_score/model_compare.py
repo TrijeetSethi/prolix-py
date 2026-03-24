@@ -9,6 +9,9 @@ on a set of documents, measuring:
 This is used to determine which model best differentiates clarity in skill
 documentation while maintaining computational efficiency.
 
+Model comparison is deprecated. It is an experimental research tool and will be
+removed in clarity-score 0.4.0.
+
 NOT derived from or vendored from any other project. All code reimplemented
 from scratch.
 """
@@ -18,10 +21,24 @@ from __future__ import annotations
 import time
 import json
 import math
+import warnings
 from dataclasses import dataclass, field
 from typing import Any
 from collections.abc import Sequence
 from pathlib import Path
+
+
+def _warn_deprecated(name: str) -> None:
+    """Warn that *name*, a part of model comparison, is deprecated.
+
+    The warning points at the code that called *name*.
+    """
+    warnings.warn(
+        f"{name} is deprecated. Model comparison is an experimental research tool "
+        "and will be removed in clarity-score 0.4.0.",
+        DeprecationWarning,
+        stacklevel=3,
+    )
 
 
 # ============================================================
@@ -195,6 +212,9 @@ def compare_models_benchmark(
     Runs each model through the clarify pipeline and produces detailed
     comparison metrics including correlation, timing, and score distribution stats.
 
+    Deprecated: this experimental research tool emits a ``DeprecationWarning``
+    and will be removed in clarity-score 0.4.0.
+
     Args:
         model_names: List of HuggingFace model names to compare
             (e.g. ``["all-MiniLM-L6-v2", "all-mpnet-base-v2"]``).
@@ -207,6 +227,7 @@ def compare_models_benchmark(
     Returns:
         BenchmarkResult with all metrics and raw scores.
     """
+    _warn_deprecated("compare_models_benchmark()")
     import sys
     from .clarify import (
         _discover_batch_jsonl, _discover_directory, _score_file, _strip_frontmatter,

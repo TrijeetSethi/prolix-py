@@ -446,6 +446,9 @@ def compare_models(
     without any coherence scorer and its results are keyed ``"<baseline>"``,
     then subsequent models each load their embedding model.
 
+    Deprecated: this experimental research tool emits a ``DeprecationWarning``
+    and will be removed in clarity-score 0.4.0.
+
     Args:
         model_names: HuggingFace model names to compare
             (e.g. ``["all-MiniLM-L6-v2", "all-mpnet-base-v2"]``).
@@ -461,6 +464,10 @@ def compare_models(
         ImportError: If any embedding model fails to load and is not the first (baseline).
     """
     from pathlib import Path as _Path
+
+    from .model_compare import _warn_deprecated
+
+    _warn_deprecated("compare_models()")
 
     all_results: dict[str, list[tuple[Path, AnalysisResult]]] = {}
 

@@ -29,6 +29,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Building the package requires hatchling 1.27 or newer, the first version that writes the `License-Expression` and `License-File` metadata PyPI accepts. The two license classifiers are removed because the `MIT OR Apache-2.0` license expression replaces them
 - The `all` extra installs only runtime features, so it no longer installs pytest and ruff. The `readability` extra installs nothing, because readability metrics are always available, and is kept so that installs naming it keep working
 
+### Deprecated
+- Model comparison is deprecated and will be removed in 0.4.0, because it is an experimental research tool. `clarity_score.compare_models()`, `clarity_score.model_compare.compare_models_benchmark()`, `clarity_score.cli.entry_compare()` and `python -m clarity_score.cli compare` still work and emit a `DeprecationWarning`
+
+### Removed
+- The `clarity-score-compare` command is no longer installed. `python -m clarity_score.cli compare` runs the same deprecated comparison
+
 ### Fixed
 - Removed duplicate `_score_file` function in clarify.py (S-01)
 - Fixed hatch build packages path (`src/clarity_score` → `clarity_score`)

@@ -53,7 +53,6 @@ Changelog = "https://github.com/treejay/vague/blob/main/python/CHANGELOG.md"
 [project.scripts]
 clarity-score = "clarity_score.cli:entry_single"
 clarity-score-dir = "clarity_score.cli:entry_dir"
-clarity-score-compare = "clarity_score.cli:entry_compare"
 
 [tool.hatch.version]
 path = "src/clarity_score/__init__.py"
