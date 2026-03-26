@@ -42,6 +42,25 @@ _EXIT_BAD_INPUT = 2
 # A single word with one of these suffixes is taken to be a file path.
 _TEXT_FILE_SUFFIXES = (".md", ".markdown", ".txt")
 
+_READABILITY_HELP = "Also report a readability score."
+_COHERENCE_HELP = (
+    "Report embedding coherence, which needs the semantic-coherence extra. "
+    "It changes the score only when a coherence weight is set."
+)
+
+_SINGLE_EPILOG = """\
+examples:
+  clarity-score "Click the Save button to store the file."
+  clarity-score SKILL.md --json --fail-under 40
+  clarity-score dir skills/ --output results.csv
+  clarity-score --json -- dir
+
+A first argument of dir scores every matching file in a directory, so pass the
+word dir after -- to score it as text. YAML front matter is removed from a file
+before it is scored. The exit status is 0 on success, 1 when the score is below
+--fail-under, and 2 for a usage error, unreadable input or missing language data.
+"""
+
 
 def main(argv: list[str] | None = None) -> int:
     """Run the ``clarity-score`` command and dispatch to its subcommands.
@@ -71,23 +90,22 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def entry_single(argv: list[str] | None = None) -> int:
-    """Entry point for `clarity-score` — single sentence/file analysis."""
+    """Score one sentence or file, the default ``clarity-score`` command."""
     parser = argparse.ArgumentParser(
         prog="clarity-score",
-        description=__doc__.strip(),
+        description="Score the clarity of a sentence or a Markdown file.",
+        epilog=_SINGLE_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     parser.add_argument("sentence", help="the sentence or file to analyze")
     parser.add_argument("--json", action="store_true", help="print machine-readable JSON")
-    parser.add_argument("--readability", "-r", action="store_true", help="include readability metrics (Flesch-Kincaid, Gunning Fog, SMOG)")
+    parser.add_argument("--readability", "-r", action="store_true", help=_READABILITY_HELP)
     parser.add_argument(
         "--fail-under", type=float, default=0.0,
         help="exit with code 1 if clarity score is below this threshold",
     )
-    parser.add_argument(
-        "--coherence", action="store_true",
-        help="enable coherence scoring (requires sentence-transformers)",
-    )
+    parser.add_argument("--coherence", action="store_true", help=_COHERENCE_HELP)
 
     args = parser.parse_args(argv)
     return _run(_cmd_single, args)
@@ -103,11 +121,8 @@ def entry_dir(argv: list[str] | None = None) -> int:
     parser.add_argument("target", help="Directory containing skill files")
     parser.add_argument("--pattern", "-p", default="**/SKILL.md", help="Glob pattern (default: **/SKILL.md)")
     parser.add_argument("--output", "-o", help="Output file (CSV or JSON)")
-    parser.add_argument("--readability", "-r", action="store_true", help="Include readability metrics")
-    parser.add_argument(
-        "--coherence", action="store_true",
-        help="Enable coherence scoring (requires sentence-transformers)",
-    )
+    parser.add_argument("--readability", "-r", action="store_true", help=_READABILITY_HELP)
+    parser.add_argument("--coherence", action="store_true", help=_COHERENCE_HELP)
 
     args = parser.parse_args(argv)
     return _run(_cmd_dir, args)
