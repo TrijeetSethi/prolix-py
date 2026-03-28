@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import nltk
 
+# The trailing slash lets nltk.data.find also accept data left as zip archives,
+# which is how the tokenizer and tagger load it.
 _RESOURCES = (
-    ("tokenizers/punkt_tab", "punkt_tab"),
-    ("taggers/averaged_perceptron_tagger_eng", "averaged_perceptron_tagger_eng"),
+    ("tokenizers/punkt_tab/", "punkt_tab"),
+    ("taggers/averaged_perceptron_tagger_eng/", "averaged_perceptron_tagger_eng"),
 )
 
 _ensured = False

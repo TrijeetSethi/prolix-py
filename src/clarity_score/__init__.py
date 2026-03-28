@@ -17,6 +17,7 @@ from __future__ import annotations
 
 __version__ = "0.2.0"
 
+from .clarity import Clarity, ClarityScores
 from .lexical import LexicalReport, WordLexicalInfo, analyze_lexical
 from .scorer import SemanticScorer, WordnetPolysemyScorer
 from .scoring import AnalysisResult, ScoreWeights, analyze
@@ -41,6 +42,10 @@ from .primitives import (
 )
 
 __all__ = [
+    # Stable interface
+    "Clarity",
+    "ClarityScores",
+    # Lower level API
     # Version
     "__version__",
     # Data classes
