@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import subprocess
@@ -10,7 +11,8 @@ from pathlib import Path
 
 import pytest
 
-from clarity_score.clarify import clarify
+from clarity_score import Clarity
+from clarity_score.clarify import _read_content
 from clarity_score.cli import entry_dir, entry_single
 
 
@@ -19,9 +21,12 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 _LOCAL_FIXTURES = Path(__file__).resolve().parent / "fixtures"
 FIXTURE_DIR = (_LOCAL_FIXTURES if _LOCAL_FIXTURES.is_dir() else REPO_ROOT / "fixtures") / "skills"
 
+# The keys of ClarityScores.to_dict(), which clarity-score --json prints in this order.
+KEYS = ["clarity", "lexical", "specificity", "syntax", "readability", "words"]
+
 
 # ============================================================
-# Single-file analysis (legacy CLI)
+# Single input scoring (the default clarity-score command)
 # ============================================================
 
 
@@ -32,46 +37,101 @@ class TestSingleFileCLI:
         result = entry_single(["The cat sat on the mat."])
         assert result == 0
 
+    def test_plain_output_is_one_line_per_field(self, capsys):
+        text = "The chef stirred the soup with the spoon."
+        assert entry_single([text]) == 0
+        scores = Clarity().score(text)
+        assert capsys.readouterr().out.splitlines() == [
+            f"clarity {scores.clarity:.2f}",
+            f"lexical {scores.lexical:.2f}",
+            f"specificity {scores.specificity:.2f}",
+            f"syntax {scores.syntax:.2f}",
+            f"readability {scores.readability:.2f}",
+            f"words {scores.words}",
+        ]
+
     def test_single_sentence_json(self, capsys):
         result = entry_single(["The cat sat on the mat.", "--json"])
         assert result == 0
         captured = capsys.readouterr()
         data = json.loads(captured.out)
-        assert "clarity_score" in data
-        assert data["sentence"] == "The cat sat on the mat."
+        assert list(data) == KEYS
+        assert data == Clarity().score("The cat sat on the mat.").to_dict()
 
     def test_single_file_json(self, capsys):
         skill_md = FIXTURE_DIR / "specific" / "SKILL.md"
         assert skill_md.is_file()
         result = entry_single([str(skill_md), "--json"])
         assert result == 0
-        assert json.loads(capsys.readouterr().out)["sentence"] != str(skill_md)
+        expected = Clarity().score(_read_content(skill_md)).to_dict()
+        assert json.loads(capsys.readouterr().out) == expected
 
     def test_long_sentence_is_scored_as_text(self, capsys):
         """Text longer than the file name limit is scored, not probed as a path."""
         sentence = "The chef stirred the soup with the spoon. " * 25
         assert entry_single([sentence, "--json"]) == 0
-        assert json.loads(capsys.readouterr().out)["sentence"] == sentence
+        assert json.loads(capsys.readouterr().out) == Clarity().score(sentence).to_dict()
 
     def test_whitespace_sentence_json_parses(self, capsys):
         result = entry_single(["   ", "--json"])
         assert result == 0
-        data = json.loads(capsys.readouterr().out)
-        assert data["clarity_score"] == 0.0
+        captured = capsys.readouterr()
+        data = json.loads(captured.out)
+        assert data["clarity"] == 0.0
+        assert data["words"] == 0
+        assert captured.err == "skipped: no words to score\n"
+
+    def test_no_words_passes_fail_under(self, capsys):
+        assert entry_single(["1234 5678", "--fail-under", "50"]) == 0
+        assert "skipped: no words to score" in capsys.readouterr().err
 
     def test_fail_under_json_exit_code(self, capsys):
         assert entry_single(["Use the thing.", "--json", "--fail-under", "99"]) == 1
-        assert json.loads(capsys.readouterr().out)["clarity_score"] < 99
+        assert json.loads(capsys.readouterr().out)["clarity"] < 99
 
     def test_fail_under_text_exit_code(self, capsys):
         assert entry_single(["Use the thing.", "--fail-under", "99"]) == 1
-        assert "Fail:" in capsys.readouterr().err
+        assert capsys.readouterr().err.startswith("fail: clarity ")
+
+    def test_fail_under_passes_at_threshold(self, capsys):
+        clarity = Clarity().score("Use the thing.").clarity
+        assert entry_single(["Use the thing.", "--fail-under", str(clarity)]) == 0
+
+    def test_readability_and_coherence_flags_are_gone(self, capsys):
+        for flag in ("--readability", "--coherence"):
+            with pytest.raises(SystemExit) as exc_info:
+                entry_single(["Use the thing.", flag])
+            assert exc_info.value.code == 2
+
+    def test_stdin_strips_front_matter(self, monkeypatch, capsys):
+        body = "Run the build script, then open the report in a browser.\n"
+        stdin = f"---\nname: demo\ndescription: Helps with various stuff\n---\n\n{body}"
+        monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(stdin.encode("utf-8"))))
+        assert entry_single(["-", "--json"]) == 0
+        assert json.loads(capsys.readouterr().out) == Clarity().score(body).to_dict()
+
+    def test_non_utf8_stdin_exits_2(self, monkeypatch, capsys):
+        latin1 = "Café menu for the week.\n".encode("latin-1")
+        monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(latin1)))
+        assert entry_single(["-", "--json"]) == 2
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert captured.err.startswith("error: cannot read standard input: ")
+
+    def test_stdin_from_a_pipe(self):
+        proc = subprocess.run(
+            [sys.executable, "-m", "clarity_score", "-", "--json"],
+            input="The dog ran.\n", capture_output=True, encoding="utf-8",
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert json.loads(proc.stdout) == Clarity().score("The dog ran.\n").to_dict()
 
     @pytest.mark.skipif(sys.platform == "win32", reason="LC_ALL has no effect on Windows")
     def test_utf8_file_under_ascii_locale(self, tmp_path):
         """A UTF-8 file is read as UTF-8 even when the locale encoding is ASCII."""
+        text = "Click “Save” to store the file.\n"
         skill_md = tmp_path / "quote.md"
-        skill_md.write_text("Click \u201cSave\u201d to store the file.\n", encoding="utf-8")
+        skill_md.write_text(text, encoding="utf-8")
         env = {
             **os.environ,
             "PYTHONUTF8": "0",
@@ -83,25 +143,23 @@ class TestSingleFileCLI:
             capture_output=True, encoding="utf-8", env=env,
         )
         assert proc.returncode == 0, proc.stderr
-        assert "\u201d" in json.loads(proc.stdout)["sentence"]
+        assert json.loads(proc.stdout) == Clarity().score(text).to_dict()
 
-    def test_front_matter_file_scores_like_clarify(self, tmp_path, capsys):
+    def test_front_matter_file_is_stripped(self, tmp_path, capsys):
         """A file is read like clarify(): front matter is stripped before scoring."""
+        body = "Run the build script, then open the report in a browser.\n"
         skill_md = tmp_path / "SKILL.md"
         skill_md.write_text(
-            "---\nname: demo\ndescription: Helps with various stuff and things\n---\n\n"
-            "Run the build script, then open the report in a browser.\n",
+            f"---\nname: demo\ndescription: Helps with various stuff and things\n---\n\n{body}",
             encoding="utf-8",
         )
         assert entry_single([str(skill_md), "--json"]) == 0
         data = json.loads(capsys.readouterr().out)
-        expected = clarify(skill_md, include_readability=False).to_json()
-        assert data["sentence"] == expected["sentence"]
-        assert data["clarity_score"] == expected["clarity_score"]
+        assert data == Clarity().score(body).to_dict()
 
     def test_non_utf8_file_exits_2(self, tmp_path, capsys):
         skill_md = tmp_path / "latin1.md"
-        skill_md.write_bytes("Caf\u00e9 menu for the week.\n".encode("latin-1"))
+        skill_md.write_bytes("Café menu for the week.\n".encode("latin-1"))
         assert entry_single([str(skill_md), "--json"]) == 2
         captured = capsys.readouterr()
         assert captured.out == ""
@@ -117,7 +175,8 @@ class TestSingleFileCLI:
 
     def test_sentence_ending_in_file_name_is_text(self, capsys):
         assert entry_single(["Update the README.md", "--json"]) == 0
-        assert json.loads(capsys.readouterr().out)["sentence"] == "Update the README.md"
+        expected = Clarity().score("Update the README.md").to_dict()
+        assert json.loads(capsys.readouterr().out) == expected
 
     def test_empty_input_exits_2(self, capsys):
         assert entry_single([""]) == 2
@@ -225,7 +284,7 @@ class TestMainDispatch:
     def test_main_double_dash_scores_the_word_dir(self, capsys):
         from clarity_score.cli import main
         assert main(["--", "dir"]) == 0
-        assert "Sentence: 'dir'" in capsys.readouterr().out
+        assert "words 1" in capsys.readouterr().out.splitlines()
 
     def test_main_dir_version(self, capsys):
         from clarity_score import __version__
@@ -357,21 +416,12 @@ class TestJSONOutput:
     """Verify CLI output matches internal dataclass."""
 
     def test_single_json_contains_all_fields(self):
-        result = entry_single(["The quick brown fox.", "--json"])
-        assert result == 0
-        captured = subprocess.run(
-            [sys.executable, "-c", """
-import json, sys
-from clarity_score.cli import entry_single
-import io
-old = sys.stdout
-sys.stdout = io.StringIO()
-entry_single(["The quick brown fox.", "--json"])
-output = sys.stdout.getvalue()
-sys.stdout = old
-print(json.loads(output)["clarity_score"])
-"""],
-            capture_output=True, encoding="utf-8"
+        proc = subprocess.run(
+            [sys.executable, "-m", "clarity_score", "The quick brown fox.", "--json"],
+            capture_output=True, encoding="utf-8",
         )
-        score = float(captured.stdout.strip())
-        assert 0 <= score <= 100
+        assert proc.returncode == 0, proc.stderr
+        data = json.loads(proc.stdout)
+        assert list(data) == KEYS
+        assert data == Clarity().score("The quick brown fox.").to_dict()
+        assert all(0 <= data[key] <= 100 for key in KEYS[:-1])

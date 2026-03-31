@@ -1,9 +1,10 @@
 """Command-line interface for clarity_score.
 
 Usage:
-    # Score a single sentence or file
+    # Score a single sentence, file or standard input
     clarity-score "The cat sat on the mat."
     clarity-score my-skill.md --json
+    clarity-score - < my-skill.md
 
     # Score every matching file in a directory
     clarity-score dir skills/
@@ -52,13 +53,23 @@ _SINGLE_EPILOG = """\
 examples:
   clarity-score "Click the Save button to store the file."
   clarity-score SKILL.md --json --fail-under 40
+  clarity-score - < SKILL.md
   clarity-score dir skills/ --output results.csv
   clarity-score --json -- dir
 
-A first argument of dir scores every matching file in a directory, so pass the
-word dir after -- to score it as text. YAML front matter is removed from a file
-before it is scored. The exit status is 0 on success, 1 when the score is below
---fail-under, and 2 for a usage error, unreadable input or missing language data.
+INPUT is a file, - for standard input, or the text to score. YAML front matter
+is removed from a file or standard input before it is scored. A first argument
+of dir scores every matching file in a directory, so pass the word dir after --
+to score it as text.
+
+The output has one line for each of the clarity, lexical, specificity, syntax
+and readability scores and one for the number of words scored. --json prints
+the same fields as a JSON object. Every score runs from 0 to 100 and a higher
+value means clearer text. Input with no words to score is reported as skipped
+and passes --fail-under.
+
+The exit status is 0 on success, 1 when the clarity score is below --fail-under,
+and 2 for a usage error, unreadable input or missing language data.
 """
 
 
@@ -90,7 +101,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def entry_single(argv: list[str] | None = None) -> int:
-    """Score one sentence or file, the default ``clarity-score`` command."""
+    """Score one sentence, file or standard input with ``Clarity``, the default command."""
     parser = argparse.ArgumentParser(
         prog="clarity-score",
         description="Score the clarity of a sentence or a Markdown file.",
@@ -98,14 +109,14 @@ def entry_single(argv: list[str] | None = None) -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    parser.add_argument("sentence", help="the sentence or file to analyze")
-    parser.add_argument("--json", action="store_true", help="print machine-readable JSON")
-    parser.add_argument("--readability", "-r", action="store_true", help=_READABILITY_HELP)
     parser.add_argument(
-        "--fail-under", type=float, default=0.0,
-        help="exit with code 1 if clarity score is below this threshold",
+        "input", metavar="INPUT", help="a file to score, - for standard input, or the text itself",
     )
-    parser.add_argument("--coherence", action="store_true", help=_COHERENCE_HELP)
+    parser.add_argument("--json", action="store_true", help="print the scores as a JSON object")
+    parser.add_argument(
+        "--fail-under", type=float, default=0.0, metavar="SCORE",
+        help="exit with code 1 if the clarity score is below SCORE",
+    )
 
     args = parser.parse_args(argv)
     return _run(_cmd_single, args)
@@ -185,86 +196,63 @@ def _run(handler: Callable[[argparse.Namespace], int], args: argparse.Namespace)
 
 
 def _cmd_single(args: argparse.Namespace) -> int:
-    """Handle single-file / sentence analysis."""
-    from .clarify import _read_content
-    from .scoring import analyze
+    """Score one sentence, file or standard input with Clarity and print the scores."""
+    from .clarify import _read_content, _strip_frontmatter
+    from .clarity import Clarity
 
-    if not args.sentence:
+    if not args.input:
         print("Error: no sentence or file specified. Usage:\n"
               "  clarity-score \"The cat sat on the mat.\" --json\n"
               "  clarity-score my-skill.md --json", file=sys.stderr)
         return _EXIT_BAD_INPUT
 
-    # Check if it's a file path that exists, or treat as a sentence
-    text = args.sentence
-    sent_path = Path(args.sentence)
-    try:
-        is_file = sent_path.is_file()
-        is_dir = not is_file and sent_path.is_dir()
-    except (OSError, ValueError):
-        # Before Python 3.14, is_file() raises OSError (ENAMETOOLONG) when the
-        # text is longer than the file name limit, so treat it as text.
-        is_file = is_dir = False
-    if is_dir:
-        print(f"error: {args.sentence} is a directory, use clarity-score dir", file=sys.stderr)
-        return _EXIT_BAD_INPUT
-    if is_file:
-        # Read like clarify() and clarity-score dir: UTF-8, front matter stripped.
+    text = args.input
+    if args.input == "-":
+        # Read standard input like a file: UTF-8, front matter stripped.
         try:
-            text = _read_content(sent_path)
+            text = _strip_frontmatter(sys.stdin.buffer.read().decode("utf-8-sig"))
         except (OSError, UnicodeDecodeError) as exc:
-            print(f"error: cannot read {args.sentence}: {exc}", file=sys.stderr)
+            print(f"error: cannot read standard input: {exc}", file=sys.stderr)
             return _EXIT_BAD_INPUT
-    elif (sent_path.suffix.lower() in _TEXT_FILE_SUFFIXES
-          and not any(ch.isspace() for ch in args.sentence)):
-        print(f"error: cannot read {args.sentence}: no such file", file=sys.stderr)
-        return _EXIT_BAD_INPUT
-
-    # Try to load coherence scorer if requested (graceful degradation)
-    coherence_scorer = None
-    if hasattr(args, "coherence") and args.coherence:
+    else:
+        # Check if it's a file path that exists, or treat as a sentence
+        path = Path(args.input)
         try:
-            from .semantic_coherence import MiniLMCoherenceScorer
-            coherence_scorer = MiniLMCoherenceScorer()
-        except ImportError as exc:
-            print(f"Warning: coherence feature not available ({exc})", file=sys.stderr)
+            is_file = path.is_file()
+            is_dir = not is_file and path.is_dir()
+        except (OSError, ValueError):
+            # Before Python 3.14, is_file() raises OSError (ENAMETOOLONG) when the
+            # text is longer than the file name limit, so treat it as text.
+            is_file = is_dir = False
+        if is_dir:
+            print(f"error: {args.input} is a directory, use clarity-score dir", file=sys.stderr)
+            return _EXIT_BAD_INPUT
+        if is_file:
+            # Read like clarify() and clarity-score dir: UTF-8, front matter stripped.
+            try:
+                text = _read_content(path)
+            except (OSError, UnicodeDecodeError) as exc:
+                print(f"error: cannot read {args.input}: {exc}", file=sys.stderr)
+                return _EXIT_BAD_INPUT
+        elif (path.suffix.lower() in _TEXT_FILE_SUFFIXES
+              and not any(ch.isspace() for ch in args.input)):
+            print(f"error: cannot read {args.input}: no such file", file=sys.stderr)
+            return _EXIT_BAD_INPUT
 
-    result = analyze(
-        text,
-        include_readability=args.readability,
-        coherence_scorer=coherence_scorer,
-    )
-    failed = args.fail_under > 0.0 and result.clarity_score < args.fail_under
+    scores = Clarity().score(text)
 
     if args.json:
-        print(json.dumps(result.to_dict(), indent=2))
-        return 1 if failed else 0
+        print(json.dumps(scores.to_dict(), indent=2))
+    else:
+        for name, value in scores.to_dict().items():
+            print(f"{name} {value:.2f}" if isinstance(value, float) else f"{name} {value}")
 
-    display_label = sent_path.name if is_file else args.sentence
-    print(f"Sentence: {display_label!r}")
-    print(f"  Clarity score:          {result.clarity_score:.1f}/100")
-    print(f"  Semantic ambiguity:     {result.semantic_ambiguity:.1f}")
-    print(f"  Specificity:            {result.specificity:.1f}")
-    print(f"  Avg word senses:        {result.lexical.avg_senses:.2f}")
-    print(f"  Avg WordNet depth:      {result.lexical.avg_depth:.2f}")
-    print(f"  Syntax ambiguity hits:  {len(result.syntax.hits)}")
-    for hit in result.syntax.hits:
-        print(f"    - {hit.kind}: {hit.span!r}")
-    if result.vague_hits:
-        print(f"  Vague-word hits:        {len(result.vague_hits)}")
-        for vhit in result.vague_hits:
-            print(f"    - {vhit.phrase!r} (-{vhit.penalty:g})")
-    if result.structural_clarity is not None:
-        print(f"  Structural clarity:     {result.structural_clarity:.1f}/100")
-    if result.readability_score is not None:
-        print(f"  Readability score:      {result.readability_score:.1f}/100")
-    if result.context_coherence is not None:
-        print(f"  Context coherence:      {result.context_coherence:.1f}/100")
-
-    if failed:
-        print(f"\nFail: clarity score {result.clarity_score:.1f} < threshold {args.fail_under}", file=sys.stderr)
+    if scores.words == 0:
+        print("skipped: no words to score", file=sys.stderr)
+        return 0
+    if scores.clarity < args.fail_under:
+        print(f"fail: clarity {scores.clarity:.2f} is below {args.fail_under:g}", file=sys.stderr)
         return 1
-
     return 0
 
 
