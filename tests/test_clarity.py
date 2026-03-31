@@ -143,6 +143,8 @@ def test_missing_wordnet_raises_lookup_error(tmp_path):
         [sys.executable, "-c", script], capture_output=True, text=True, env=env, timeout=120
     )
     assert proc.returncode == 0, proc.stderr
+    # Every message names both commands, so check that WordNet is the data reported missing.
+    assert "Open English WordNet 2025 is not installed" in proc.stdout
     assert "python -m wn download oewn:2025" in proc.stdout
     assert "python -m nltk.downloader punkt_tab averaged_perceptron_tagger_eng" in proc.stdout
 
