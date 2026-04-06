@@ -21,13 +21,16 @@ from __future__ import annotations
 
 import argparse
 import csv
+import functools
 import json
+import os
 import statistics as _stats
 import sys
 import time
 import warnings
 from collections.abc import Callable
 from pathlib import Path
+from typing import ParamSpec
 
 from . import __version__
 
@@ -73,6 +76,33 @@ and 2 for a usage error, unreadable input or missing language data.
 """
 
 
+_P = ParamSpec("_P")
+
+
+def _exit_quietly_on_broken_pipe(entry: Callable[_P, int]) -> Callable[_P, int]:
+    """Make a command return 0 without a message when its stdout reader closes early.
+
+    The flush runs inside the try, so a closed pipe is caught here and not
+    reported by the interpreter at exit. Stdout then points at os.devnull, so
+    the flush at exit cannot fail again.
+    """
+
+    @functools.wraps(entry)
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> int:
+        try:
+            code = entry(*args, **kwargs)
+            sys.stdout.flush()
+        except BrokenPipeError:
+            devnull = os.open(os.devnull, os.O_WRONLY)
+            os.dup2(devnull, sys.stdout.fileno())
+            os.close(devnull)
+            return 0
+        return code
+
+    return wrapper
+
+
+@_exit_quietly_on_broken_pipe
 def main(argv: list[str] | None = None) -> int:
     """Run the ``clarity-score`` command and dispatch to its subcommands.
 
@@ -100,6 +130,7 @@ def main(argv: list[str] | None = None) -> int:
 # ---------------------------------------------------------------------------
 
 
+@_exit_quietly_on_broken_pipe
 def entry_single(argv: list[str] | None = None) -> int:
     """Score one sentence, file or standard input with ``Clarity``, the default command."""
     parser = argparse.ArgumentParser(
@@ -122,6 +153,7 @@ def entry_single(argv: list[str] | None = None) -> int:
     return _run(_cmd_single, args)
 
 
+@_exit_quietly_on_broken_pipe
 def entry_dir(argv: list[str] | None = None) -> int:
     """Entry point for ``clarity-score dir`` and its ``clarity-score-dir`` alias."""
     parser = argparse.ArgumentParser(

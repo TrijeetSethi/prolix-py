@@ -330,6 +330,29 @@ class TestMainDispatch:
         assert "error" not in captured.err
 
 
+def _run_with_closed_stdout(*args: str) -> tuple[int, str]:
+    """Run python -m clarity_score with a stdout pipe that is closed before any output."""
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "clarity_score", *args],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    assert proc.stdout is not None and proc.stderr is not None
+    proc.stdout.close()
+    stderr = proc.stderr.read().decode("utf-8", "replace")
+    proc.stderr.close()
+    return proc.wait(timeout=120), stderr
+
+
+class TestBrokenPipe:
+    """A reader that closes stdout early, as head does, ends the command quietly."""
+
+    def test_single_exits_0_when_stdout_closes(self):
+        assert _run_with_closed_stdout("The chef stirred the soup with the spoon.") == (0, "")
+
+    def test_dir_exits_0_when_stdout_closes(self):
+        assert _run_with_closed_stdout("dir", str(FIXTURE_DIR)) == (0, "")
+
+
 # ============================================================
 # Model comparison (deprecated `compare` subcommand)
 # ============================================================
