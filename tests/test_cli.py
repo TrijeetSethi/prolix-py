@@ -352,6 +352,13 @@ class TestBrokenPipe:
     def test_dir_exits_0_when_stdout_closes(self):
         assert _run_with_closed_stdout("dir", str(FIXTURE_DIR)) == (0, "")
 
+    @pytest.mark.parametrize("fmt", [[], ["--json"]], ids=["text", "json"])
+    def test_fail_under_still_exits_1_when_stdout_closes(self, fmt):
+        code, stderr = _run_with_closed_stdout("Do stuff.", *fmt, "--fail-under", "99")
+        assert code == 1
+        assert stderr.startswith("fail: clarity ")
+        assert "BrokenPipeError" not in stderr
+
 
 # ============================================================
 # Model comparison (deprecated `compare` subcommand)

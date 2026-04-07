@@ -80,15 +80,18 @@ _P = ParamSpec("_P")
 
 
 def _exit_quietly_on_broken_pipe(entry: Callable[_P, int]) -> Callable[_P, int]:
-    """Make a command return 0 without a message when its stdout reader closes early.
+    """Make a command end without a message when its stdout reader closes early.
 
     The flush runs inside the try, so a closed pipe is caught here and not
     reported by the interpreter at exit. Stdout then points at os.devnull, so
-    the flush at exit cannot fail again.
+    the flush at exit cannot fail again. A command that returned before the
+    pipe error keeps its exit status, so a score below --fail-under still
+    exits with 1. A command stopped while it was still writing returns 0.
     """
 
     @functools.wraps(entry)
     def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> int:
+        code = 0
         try:
             code = entry(*args, **kwargs)
             sys.stdout.flush()
@@ -96,7 +99,6 @@ def _exit_quietly_on_broken_pipe(entry: Callable[_P, int]) -> Callable[_P, int]:
             devnull = os.open(os.devnull, os.O_WRONLY)
             os.dup2(devnull, sys.stdout.fileno())
             os.close(devnull)
-            return 0
         return code
 
     return wrapper
