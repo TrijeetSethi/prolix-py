@@ -359,6 +359,12 @@ class TestBrokenPipe:
         assert stderr.startswith("fail: clarity ")
         assert "BrokenPipeError" not in stderr
 
+    @pytest.mark.parametrize(
+        "args", [["--help"], ["--version"], ["dir", "--help"]], ids=["help", "version", "dir-help"],
+    )
+    def test_help_and_version_exit_0_when_stdout_closes(self, args):
+        assert _run_with_closed_stdout(*args) == (0, "")
+
 
 # ============================================================
 # Model comparison (deprecated `compare` subcommand)

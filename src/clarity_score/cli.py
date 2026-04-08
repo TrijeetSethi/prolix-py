@@ -87,13 +87,19 @@ def _exit_quietly_on_broken_pipe(entry: Callable[_P, int]) -> Callable[_P, int]:
     the flush at exit cannot fail again. A command that returned before the
     pipe error keeps its exit status, so a score below --fail-under still
     exits with 1. A command stopped while it was still writing returns 0.
+    The --help and --version options print and then raise SystemExit, so
+    their output is flushed inside the try as well.
     """
 
     @functools.wraps(entry)
     def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> int:
         code = 0
         try:
-            code = entry(*args, **kwargs)
+            try:
+                code = entry(*args, **kwargs)
+            except SystemExit:
+                sys.stdout.flush()
+                raise
             sys.stdout.flush()
         except BrokenPipeError:
             devnull = os.open(os.devnull, os.O_WRONLY)
