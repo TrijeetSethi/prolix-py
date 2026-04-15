@@ -249,6 +249,10 @@ def _cmd_single(args: argparse.Namespace) -> int:
     text = args.input
     if args.input == "-":
         # Read standard input like a file: UTF-8, front matter stripped.
+        if sys.stdin is None:
+            # Python sets sys.stdin to None when file descriptor 0 is closed.
+            print("error: cannot read standard input: it is closed", file=sys.stderr)
+            return _EXIT_BAD_INPUT
         try:
             text = _strip_frontmatter(sys.stdin.buffer.read().decode("utf-8-sig"))
         except (OSError, UnicodeDecodeError) as exc:

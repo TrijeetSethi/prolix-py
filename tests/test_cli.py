@@ -118,6 +118,14 @@ class TestSingleFileCLI:
         assert captured.out == ""
         assert captured.err.startswith("error: cannot read standard input: ")
 
+    def test_closed_stdin_exits_2(self, monkeypatch, capsys):
+        """Python sets sys.stdin to None when file descriptor 0 is closed."""
+        monkeypatch.setattr(sys, "stdin", None)
+        assert entry_single(["-", "--json"]) == 2
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert captured.err.startswith("error: cannot read standard input: ")
+
     def test_stdin_from_a_pipe(self):
         proc = subprocess.run(
             [sys.executable, "-m", "clarity_score", "-", "--json"],
