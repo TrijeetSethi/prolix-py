@@ -5,15 +5,16 @@ build-backend = "hatchling.build"
 [project]
 name = "clarity-score"
 dynamic = ["version"]
-description = "Scores a sentence's clarity via syntactic-ambiguity, WordNet-based specificity, and vague-word heuristics"
+description = "Heuristic clarity and vagueness scoring for English prose"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 requires-python = ">=3.10"
 authors = [{ name = "the clarity-score authors", email = "developers@vague.io" }]
-keywords = ["clarity", "sentences", "natural-language", "wordnet", "linguistics"]
+keywords = ["nlp", "readability", "prose", "vagueness", "wordnet", "clarity", "linguistics"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
+    "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
