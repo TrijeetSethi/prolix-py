@@ -338,10 +338,12 @@ class TestMainDispatch:
         assert "error" not in captured.err
 
 
-def _run_with_closed_stdout(*args: str) -> tuple[int, str]:
-    """Run python -m clarity_score with a stdout pipe that is closed before any output."""
+def _run_with_closed_stdout(
+    *args: str, command: tuple[str, ...] = ("-m", "clarity_score"),
+) -> tuple[int, str]:
+    """Run python -m clarity_score, or another command, with stdout closed before any output."""
     proc = subprocess.Popen(
-        [sys.executable, "-m", "clarity_score", *args],
+        [sys.executable, *command, *args],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
     assert proc.stdout is not None and proc.stderr is not None
@@ -359,6 +361,11 @@ class TestBrokenPipe:
 
     def test_dir_exits_0_when_stdout_closes(self):
         assert _run_with_closed_stdout("dir", str(FIXTURE_DIR)) == (0, "")
+
+    def test_dir_alias_exits_0_when_stdout_closes(self):
+        """The clarity-score-dir script calls entry_dir directly, without main."""
+        script = "import sys; from clarity_score.cli import entry_dir; sys.exit(entry_dir())"
+        assert _run_with_closed_stdout(str(FIXTURE_DIR), command=("-c", script)) == (0, "")
 
     @pytest.mark.parametrize("fmt", [[], ["--json"]], ids=["text", "json"])
     def test_fail_under_still_exits_1_when_stdout_closes(self, fmt):
