@@ -1,16 +1,19 @@
-"""clarity_score: syntactic-ambiguity + WordNet-specificity + vagueness sentence scoring.
+"""Score how clearly English text is written.
 
-See ../../ARCHITECTURE.md for the design.
+The Clarity class is the stable interface of this package. Create one
+Clarity object, call its score method on a sentence or a document and read
+the result. Every score runs from 0 to 100 and a higher value always means
+clearer text.
 
-Usage::
+    from clarity_score import Clarity
 
-    from clarity_score import analyze, AnalysisResult, ScoreWeights
+    clarity = Clarity()
+    scores = clarity.score("Replace the leaking kitchen faucet before Friday")
+    print(scores.clarity)
 
-    result = analyze("The chef stirred the soup with the spoon.")
-    print(result.clarity_score)  # → ~47/100
-
-Optional features (install with extras):
-    - semantic-coherence: embedding-based contextual coherence (requires sentence-transformers)
+The other functions in this package, such as analyze, clarify and
+extract_primitives, form the lower level API. They return more detail and
+may change in any minor release before 1.0.
 """
 
 from __future__ import annotations
