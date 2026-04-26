@@ -3,10 +3,12 @@ a single 0-100 clarity score, following starter.md's weighted-formula
 shape (fixing its `log1k` bug and generalizing the syntactic-multiplicity
 term -- see ../../ARCHITECTURE.md).
 
-Added in Phase B: optional readability and coherence signals. These are
-feature-gated — when disabled (the default), they contribute zero weight
-and AnalysisResult fields are None (not errors). When enabled, they absorb
-remaining weight proportionally so the formula always sums to a valid score.
+Readability and coherence are optional signals. readability_score is
+computed when include_readability is set and context_coherence when a
+coherence scorer is passed, and each is None otherwise. Either one changes
+clarity_score only when its weight is above 0. Both weights are 0 by
+default, so with the default weights these signals are reported and do not
+change the score.
 
 Weighted formula:
     ambiguity = (semantic*w_semantic + vagueness*w_vagueness + syntax*w_syntax
@@ -14,8 +16,9 @@ Weighted formula:
                  + (100-coherence)*w_coherence) / (sum of the counted weights)
     clarity = 100 - ambiguity, with ambiguity clamped to the range 0 to 100
 
-A weight counts only when it is above 0 and, for structure, readability and
-coherence, only when that signal was computed. The default weights are
+The syntax term is a penalty from 0 to 10 and every other term runs from 0
+to 100. A weight counts only when it is above 0 and, for structure,
+readability and coherence, only when that signal was computed. The default weights are
 semantic 0.24, vagueness 0.24, syntax 0.12 and structure 0.20, with
 readability and coherence at 0. They add up to 0.80, so after the division
 they act as 0.30, 0.30, 0.15 and 0.25. Structure is computed only for text
@@ -93,8 +96,8 @@ class ScoreWeights:
     semantic: float = 0.24
     vagueness: float = 0.24
     syntax: float = 0.12
-    readability: float = 0.0   # optional — set to non-zero to enable
-    coherence: float = 0.0     # optional — set to non-zero to enable
+    readability: float = 0.0   # above 0 to count readability_score in the score
+    coherence: float = 0.0     # above 0 to count context_coherence in the score
     structure: float = 0.20    # structural clarity (always available)
 
     def __post_init__(self) -> None:
@@ -186,11 +189,17 @@ def analyze(
         sentence: The sentence to analyze
         weights: Custom score weights. The defaults add up to 0.80, and the
             formula divides by the sum of the weights of the present signals.
-        semantic_scorer: Semantic scorer for polysemy analysis
+        semantic_scorer: Semantic scorer for polysemy analysis. Defaults to
+            WordnetPolysemyScorer.
         extra_vague_words: Additional vague words to check against. A single
             string counts as one entry.
-        include_readability: Whether to compute readability metrics (always available — no feature check needed)
-        coherence_scorer: Coherence scorer instance. If None and coherence enabled, uses default MiniLMCoherenceScorer.
+        include_readability: Whether to compute readability_score. It changes
+            clarity_score only when weights.readability is above 0, which it
+            is not by default.
+        coherence_scorer: Scorer that computes context_coherence. When it is
+            None, no coherence is computed and no model is loaded. The value
+            changes clarity_score only when weights.coherence is above 0,
+            which it is not by default.
 
     Returns:
         AnalysisResult with clarity score and all applicable sub-scores.

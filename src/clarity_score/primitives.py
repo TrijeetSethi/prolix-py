@@ -12,13 +12,13 @@ Default signal names (all on 0-100 where **higher = worse/ambiguous**):
 
     semantic_ambiguity    Word polysemy → higher means more ambiguous words
     vagueness             Placeholder-word ratio + low wordnet depth penalty
-    syntax_penalty        POS-pattern ambiguity hits (capped)
-    structure_ambiguity   Inverted structural clarity: 100 - struct_score
+    syntax_penalty        POS-pattern ambiguity hits, capped at 10
 
 Clarity signals (all on 0-100 where **higher = better**):
 
-    readability_score     Flesch-Kincaid / Gunning Fog / SMOG composite
+    readability_score     Flesch Reading Ease mapped to 25 to 100
     coherence             Embedding similarity (feature-gated, needs scorer)
+    structural_clarity    Markdown structure, None for text with a single line
 
 The default ``analyze()`` function in ``scoring.py`` internally computes these
 same primitives and then applies a weighted sum.  This module exposes the
@@ -150,8 +150,8 @@ def extract_primitives(
 ) -> ClarityPrimitives:
     """Compute ALL raw clarity signals for *text* in a single pass.
 
-    This function replaces the old ``analyze()`` entry point when you want to
-    score many formulas over the same text (e.g. during grid-search tuning).
+    Use it instead of ``analyze()`` when you want to score many formulas
+    over the same text, for example during grid-search tuning.
 
     Returns a frozen :class:`ClarityPrimitives` dataclass containing every
     sub-score on a 0-100 scale (ambiguity-weighted for bad signals, clarity-
@@ -159,14 +159,16 @@ def extract_primitives(
 
     Args:
         text: The document text to analyze.
-        include_readability: Compute Flesch-Kincaid / Gunning Fog metrics?
+        include_readability: Whether to compute readability_score, the
+            Flesch Reading Ease mapped to 25 to 100.
         include_coherence: Use an embedding scorer for semantic flow?
         coherence_scorer: Required if ``include_coherence=True`` — must have
             a ``score(text, tagged_tokens) -> float`` method.
 
     Returns:
-        ClarityPrimitives with all sub-scores populated (or None for disabled
-        signals).
+        ClarityPrimitives with all sub-scores populated. readability_score
+        and coherence are None when they are not computed, and
+        structural_clarity is None for text with a single line.
     """
     from .lexical import analyze_lexical
     from .scorer import WordnetPolysemyScorer
@@ -202,7 +204,7 @@ def extract_primitives(
     hit_rate_per_sentence = syntax_report.ambiguity_score / sentence_count
     syntax_penalty = min(hit_rate_per_sentence * 25, 10)
 
-    # 4. Readability (optional — Flesch-Kincaid composite)
+    # 4. Readability (optional, Flesch Reading Ease)
     readability_score = None
     if include_readability:
         from .readability import text_to_clarity_score as _rto

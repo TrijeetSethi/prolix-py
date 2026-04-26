@@ -16,6 +16,14 @@ DEFAULT_PENALTY = 15.0
 
 @dataclass(frozen=True)
 class VagueHit:
+    """A vague word or phrase found by find_vague_hits.
+
+    phrase is the matched lexicon entry in lower case. penalty is nominal.
+    find_vague_hits always sets it to DEFAULT_PENALTY and analyze() does not
+    subtract it. analyze() instead lowers specificity by 40 times the share
+    of distinct vague phrases among the distinct words.
+    """
+
     phrase: str
     penalty: float
     start: int  # index into the word-token sequence passed to find_vague_hits

@@ -229,7 +229,9 @@ def clarify(
             * JSONL batch file with ``{"path": "..."}`` entries
         include_readability: Include readability metrics in results (default True).
         coherence_scorer: Optional embedding-based coherence scorer. If provided,
-            each result will include ``context_coherence``.
+            each result will include ``context_coherence``. clarify() scores
+            with the default ScoreWeights, whose readability and coherence
+            weights are 0, so neither signal changes ``clarity_score``.
         pattern: Glob pattern for directory scanning (default ``**/*.md``).
             Set to ``"*/SKILL.md"`` to only find SKILL.md files.
         fmt: Output format hint — currently unused (auto-detection always applies).

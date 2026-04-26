@@ -53,16 +53,13 @@ class ReadabilityMetrics:
         """Convert FRE (0-100, higher=easier) to clarity score (0-100, higher=clearer).
 
         Mapping:
-            FRE 90+  -> clarity ~85-100 (very easy, potentially simplistic)
-            FRE 70   -> clarity ~65-80  (standard readable)
-            FRE 50   -> clarity ~40-60  (fairly hard)
-            FRE 30   -> clarity ~20-40  (hard to read)
-            FRE 0    -> clarity ~10-20  (very difficult, academic/technical)
+            clarity = 25 + 75 * sqrt(FRE / 100), with FRE clamped to 0 to 100
 
-        Uses sqrt scaling: easy wins more than linear because readability
-        matters disproportionately for skill documentation.
-        Floor: complexity does not mean unclear. Even technically complex text
-        can be unambiguous — that's measured by other signals. We clamp floor at 25.
+        So FRE 0 gives 25, FRE 25 gives 62.5 and FRE 100 gives 100. The
+        square root rewards easy text more than a linear map would, because
+        readability matters disproportionately for skill documentation. The
+        floor of 25 reflects that complex text can still be unambiguous,
+        which the other signals measure.
         """
         fre = max(0.0, self.flesch_reading_ease)
         clarity = 25.0 + math.sqrt(fre / 100.0) * 75.0

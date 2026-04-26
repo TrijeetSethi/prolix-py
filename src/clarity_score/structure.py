@@ -200,11 +200,18 @@ def _estimate_action_ratio(text: str) -> float:
 def analyze_structure(text: str) -> StructureReport:
     """Analyze the structural clarity of a markdown document.
 
-    Scores based on four dimensions:
-        - Heading hierarchy (weight 0.25)
-        - List density (weight 0.25)  
-        - Example presence (weight 0.25)
-        - Action verb ratio (weight 0.25)
+    structural_clarity is the sum of four parts and a bonus, clamped to
+    10 to 100:
+        - Headings: headings per 100 lines, up to 30 points
+        - Lists: list items per 100 lines, up to 30 points
+        - Code examples: 5 points per fenced code block, up to 20 points
+        - Action verbs: 30 times the share of sentences that start with a
+          listed action verb, up to 30 points
+        - Heading depth bonus: 5 points when the deepest heading is level 2 to 4
+
+    A document shorter than 100 lines counts as 100 lines, so each heading
+    and each list item is worth one point there. Headings, list items and
+    sentences inside fenced code blocks are not counted.
 
     Args:
         text: Markdown text to analyze
@@ -233,7 +240,7 @@ def analyze_structure(text: str) -> StructureReport:
     # Action ratio: higher = more imperative/instructional = clearer for skills
     action_score = action_ratio * 30
 
-    # Weighted sum (each contributes up to ~25 points)
+    # Sum of the parts (30, 30, 20 and 30 points at most)
     raw_clarity = heading_density_score + list_density_score + example_score + action_score
     
     # Add structural bonus for good heading depth (H2-H4 ideal for skills)

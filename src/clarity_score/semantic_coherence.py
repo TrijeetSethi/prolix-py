@@ -79,18 +79,18 @@ def _normalize_vector(v: list[float]) -> list[float]:
 
 
 def sentence_coherence_score(sentence: str, tokens: Sequence[tuple[str, str]]) -> float:
-    """Compute coherence score without requiring MiniLM (returns default when no model).
+    """Return a placeholder coherence score without an embedding model.
 
-    This is a convenience wrapper that returns a default neutral score of 50.0.
-    For actual embedding-based coherence scoring, use MiniLMCoherenceScorer.
+    This function never loads a model. For embedding-based coherence
+    scoring, use MiniLMCoherenceScorer.
 
     Args:
         sentence: Original sentence text
         tokens: POS-tagged token list from tag_sentence()
 
     Returns:
-        Coherence score on 0-100 scale. Returns 50.0 (neutral) by default;
-        returns actual score if scorer is available and content words >= 2.
+        100.0 when there are fewer than two content words and the neutral
+        50.0 otherwise.
     """
     content_words = extract_content_words(tokens)
 
