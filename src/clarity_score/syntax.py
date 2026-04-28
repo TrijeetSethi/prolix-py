@@ -31,12 +31,23 @@ _chunker = nltk.RegexpParser(_CHUNK_GRAMMAR)
 
 @dataclass(frozen=True)
 class AmbiguityHit:
+    """One structurally ambiguous pattern found by analyze_syntax.
+
+    kind names the pattern, such as "pp-attachment", and span is the text of
+    the chunk where it was found.
+    """
+
     kind: str
     span: str
 
 
 @dataclass(frozen=True)
 class SyntaxReport:
+    """The structural ambiguity hits found by analyze_syntax.
+
+    More hits mean less clear syntax.
+    """
+
     hits: list[AmbiguityHit] = field(default_factory=list)
 
     @property
@@ -119,6 +130,11 @@ def analyze_syntax(tagged_tokens: list[tuple[str, str]]) -> SyntaxReport:
 
 
 def tag_sentence(sentence: str) -> list[tuple[str, str]]:
+    """Tokenize text with NLTK and return (token, part of speech tag) pairs.
+
+    The tags are Penn Treebank tags. Missing NLTK tokenizer and tagger data
+    is downloaded on first use, and LookupError is raised when that fails.
+    """
     ensure_nltk_data()
     tokens = nltk.word_tokenize(sentence)
     return nltk.pos_tag(tokens)

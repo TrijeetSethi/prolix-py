@@ -118,6 +118,27 @@ class ScoreWeights:
 
 @dataclass(frozen=True)
 class AnalysisResult:
+    """The result of analyze(), with the clarity score and every signal.
+
+    Attributes:
+        sentence: The text as given to analyze().
+        clarity_score: 0 to 100. Higher means clearer text.
+        semantic_ambiguity: 0 to 100. Higher means words with more dictionary
+            senses, so less clear text.
+        specificity: 0 to 100. Higher means more specific words and fewer
+            vague ones, so clearer text.
+        syntax: The structural ambiguity hits. More hits mean less clear text.
+        lexical: The WordNet sense count and depth of every scored word.
+        vague_hits: The vague words and phrases found in the text.
+        weights: The ScoreWeights used for clarity_score.
+        readability_score: 25 to 100, or None unless include_readability is
+            set. Higher means easier to read.
+        context_coherence: 0 to 100, or None unless a coherence scorer is
+            passed. Higher means words that relate to each other more.
+        structural_clarity: 10 to 100, or None for text with a single line.
+            Higher means better markdown structure.
+    """
+
     sentence: str
     clarity_score: float
     semantic_ambiguity: float
@@ -126,7 +147,6 @@ class AnalysisResult:
     lexical: LexicalReport
     vague_hits: list[VagueHit] = field(default_factory=list)
     weights: ScoreWeights = field(default_factory=ScoreWeights)
-    # NEW optional fields — None when features not enabled/available
     readability_score: Optional[float] = None
     context_coherence: Optional[float] = None
     structural_clarity: Optional[float] = None

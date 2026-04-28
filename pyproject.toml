@@ -72,6 +72,13 @@ include = [
 line-length = 100
 target-version = "py310"
 
+# Every public class, method and function has a docstring.
+[tool.ruff.lint]
+extend-select = ["D101", "D102", "D103"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]
+
 [[tool.mypy.overrides]]
 module = ["nltk", "nltk.*", "sentence_transformers"]
 ignore_missing_imports = true

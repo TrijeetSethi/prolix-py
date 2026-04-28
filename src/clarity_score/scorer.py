@@ -20,6 +20,8 @@ from typing import Protocol
 
 
 class SemanticScorer(Protocol):
+    """Interface for a semantic ambiguity scorer that analyze() can use."""
+
     def score(self, sentence: str, words: Sequence[str]) -> float:
         """Returns a semantic-ambiguity score; higher means more ambiguous.
         The value is clamped to 0 to 100 by the pipeline: `analyze()` and
@@ -35,6 +37,11 @@ class WordnetPolysemyScorer:
     """
 
     def score(self, sentence: str, words: Sequence[str]) -> float:
+        """Return 30 times ln(1 + the mean sense count of words).
+
+        Returns 10.0 when the mean is 1 or less. Higher means more ambiguous
+        words. sentence is not used.
+        """
         from .lexical import analyze_lexical
 
         avg_senses = analyze_lexical(words).avg_senses

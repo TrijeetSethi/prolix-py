@@ -118,6 +118,17 @@ def _max_depth(synset: wn.Synset) -> int:
 
 @dataclass(frozen=True)
 class WordLexicalInfo:
+    """WordNet data for one word.
+
+    Attributes:
+        word: The word as looked up.
+        sense_count: The number of WordNet senses, 1 for a word WordNet does
+            not know. Higher means a more ambiguous word.
+        avg_max_depth: The mean of the maximum hypernym depth of each sense,
+            3.0 for a word WordNet does not know. Higher means a more
+            specific word.
+    """
+
     word: str
     sense_count: int
     avg_max_depth: float
@@ -125,16 +136,20 @@ class WordLexicalInfo:
 
 @dataclass(frozen=True)
 class LexicalReport:
+    """WordNet data for every scored word, in input order."""
+
     words: list[WordLexicalInfo] = field(default_factory=list)
 
     @property
     def avg_senses(self) -> float:
+        """Mean sense_count of the words, or 0.0 when there are none."""
         if not self.words:
             return 0.0
         return sum(w.sense_count for w in self.words) / len(self.words)
 
     @property
     def avg_depth(self) -> float:
+        """Mean avg_max_depth of the words, or 0.0 when there are none."""
         if not self.words:
             return 0.0
         return sum(w.avg_max_depth for w in self.words) / len(self.words)
@@ -172,6 +187,12 @@ def lookup_word(word: str) -> WordLexicalInfo:
 
 
 def analyze_lexical(words: Iterable[str]) -> LexicalReport:
+    """Look up every alphabetic word in WordNet and return a LexicalReport.
+
+    Words that are not made only of letters are skipped. Raises
+    LookupError naming the download command when the WordNet data is not
+    installed.
+    """
     return LexicalReport(words=[lookup_word(w) for w in words if w.isalpha()])
 
 __all__ = [

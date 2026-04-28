@@ -56,9 +56,11 @@ class ClarityPrimitives:
     word_count: Optional[int] = None   # words of 2 or more letters; None in older records
 
     def to_dict(self) -> dict:
+        """Return the fields as a dict, in field order."""
         return asdict(self)
 
     def to_json(self) -> str:
+        """Return to_dict() as a JSON string."""
         return json.dumps(self.to_dict())
 
     @staticmethod
