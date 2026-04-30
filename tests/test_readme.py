@@ -10,6 +10,8 @@ import wn
 
 README = Path(__file__).resolve().parents[1] / "README.md"
 
+# Blocks fenced as py instead of python import third party evaluation
+# frameworks, so the README shows them but this test does not run them.
 _PYTHON_BLOCK = re.compile(r"^```python\n(.*?)^```$", re.DOTALL | re.MULTILINE)
 
 

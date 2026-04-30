@@ -180,6 +180,133 @@ matches or a file fails to score. `clarity-score-dir` is an alias of
 `clarity-score dir`. To score the word dir as text, pass it after `--`, as in
 `clarity-score -- dir`.
 
+## Use as an evaluation metric
+
+Clarity works as a metric in evaluation frameworks without an adapter. Score
+the text, compare the clarity field with a threshold and build the reason from
+the fields of ClarityScores. The package depends on none of the frameworks
+below, so install the one you use yourself.
+
+Choose the threshold from a baseline of your own texts. One way is to score
+texts you already accept and set the threshold just below the lowest of their
+scores. You can also compare the score of a new version of a text with the
+score of the old version instead of using a fixed bar. Do not divide the score
+by 100 and gate at 0.5, a common default in evaluation frameworks. Most real
+text scores near the middle of the range and many clear texts score below 50,
+so that gate fails texts that are fine.
+
+Output with no words to score gets 0 on every field and fails any threshold
+above 0. Check the words field if empty output needs its own handling.
+
+Clarity never downloads anything. A grader that runs without network access
+needs the language data installed ahead of time with the commands in Download
+the language data, for example when its image is built. Set NLTK_DATA and
+WN_DATA_DIR when the data is not in the default directories.
+
+The examples share these definitions. Create the Clarity object once and reuse
+it for every sample.
+
+```python
+from clarity_score import Clarity, ClarityScores
+
+clarity = Clarity()
+
+# Set the threshold from the scores of your own baseline texts.
+THRESHOLD = 40.0
+
+
+def explain(scores: ClarityScores) -> str:
+    return ", ".join(f"{name} {value}" for name, value in scores.to_dict().items())
+```
+
+A promptfoo Python assertion returns a pass flag, a score and a reason.
+promptfoo reports scores from 0 to 1, so the score is divided by 100, while the
+pass flag compares the clarity field with your threshold. Put the definitions
+and this function in one file, such as clarity_assert.py.
+
+```python
+def get_assert(output, context):
+    scores = clarity.score(output)
+    return {
+        "pass": scores.clarity >= THRESHOLD,
+        "score": scores.clarity / 100,
+        "reason": explain(scores),
+    }
+```
+
+Reference the file from the assertions of a test.
+
+```yaml
+assert:
+  - type: python
+    value: file://clarity_assert.py
+```
+
+A DeepEval metric sets a score, a success flag and a reason. DeepEval also
+reports scores from 0 to 1, so the metric reports the clarity field divided by
+100 and takes its threshold on the same scale. DeepEval copies a metric by
+passing its attributes back to the constructor, so the constructor stores the
+threshold unchanged.
+
+```py
+from deepeval.metrics import BaseMetric
+from deepeval.test_case import LLMTestCase
+
+
+class ClarityMetric(BaseMetric):
+    def __init__(self, threshold: float = THRESHOLD / 100):
+        self.threshold = threshold
+
+    def measure(self, test_case: LLMTestCase) -> float:
+        scores = clarity.score(test_case.actual_output)
+        self.score = scores.clarity / 100
+        self.success = self.score >= self.threshold
+        self.reason = explain(scores)
+        return self.score
+
+    async def a_measure(self, test_case: LLMTestCase) -> float:
+        return self.measure(test_case)
+
+    def is_successful(self) -> bool:
+        return self.success
+
+    @property
+    def __name__(self):
+        return "Clarity"
+```
+
+An Inspect scorer returns the clarity field as the value of each sample, and
+the mean metric averages it over the samples.
+
+```py
+from inspect_ai.scorer import Score, Target, mean, scorer
+from inspect_ai.solver import TaskState
+
+
+@scorer(metrics=[mean()])
+def clarity_scorer():
+    async def score(state: TaskState, target: Target) -> Score:
+        scores = clarity.score(state.output.completion)
+        return Score(value=scores.clarity, explanation=explain(scores))
+
+    return score
+```
+
+A pytest gate scores each file as its own test and shows every field when a
+file falls below the threshold.
+
+```python
+from pathlib import Path
+
+import pytest
+
+
+@pytest.mark.parametrize("path", sorted(Path("prompts").glob("*.txt")), ids=str)
+def test_prompt_is_clear(path):
+    scores = clarity.score(path.read_text(encoding="utf-8"))
+    assert scores.clarity >= THRESHOLD, explain(scores)
+```
+
 ## Lower level API
 
 The functions below return more detail than Clarity, such as each vague word
