@@ -1,6 +1,6 @@
-"""Loads the shared vague-word lexicon (fixtures/vague_words.txt, bundled
-into this package as clarity_score/data/vague_words.txt -- see
-tools/sync_shared_data.py) and flags occurrences in a token sequence.
+"""Loads the vague-word lexicon bundled as clarity_score/data/vague_words.txt
+and flags occurrences in a token sequence. The Rust crate bundles the same
+list.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from importlib import resources
 
-# Matches starter.md's per-hit vague-word penalty.
+# Nominal per-hit penalty reported on each VagueHit. analyze() does not use it.
 DEFAULT_PENALTY = 15.0
 
 

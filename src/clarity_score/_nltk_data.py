@@ -1,8 +1,6 @@
 """Lazily ensures the NLTK resources this package needs are downloaded.
 
-Mirrors the ``nltk.download(..., quiet=True)`` calls at the top of the
-original starter.md script, but done once per process instead of on every
-import.
+The check runs once per process, on first use instead of on every import.
 """
 
 from __future__ import annotations

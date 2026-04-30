@@ -1,4 +1,4 @@
-"""Semantic coherence scoring via sentence embeddings (spanIQ-inspired).
+"""Semantic coherence scoring via sentence embeddings.
 
 Measures whether content words in a sentence are semantically related to each other.
 High coherence = words make sense together; low coherence = incongruous or forced vocabulary.
@@ -7,8 +7,8 @@ This is orthogonal to SemanticScorer (which measures per-word polysemy). A sente
 have high individual word specificity but low coherence if those specific words don't
 logically relate to each other.
 
-NOT derived from or vendored from spanIQ or any other project. All code reimplemented
-from scratch using the embedding model as a black box.
+No code is vendored from another project. All code is written from scratch
+and uses the embedding model as a black box.
 
 Usage:
     scorer = MiniLMCoherenceScorer()  # loads the model (about 90 MB, cached)

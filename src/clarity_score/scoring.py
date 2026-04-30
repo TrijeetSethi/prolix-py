@@ -1,7 +1,7 @@
-"""Combines the syntactic, lexical/semantic, and vagueness sub-scores into
-a single 0-100 clarity score, following starter.md's weighted-formula
-shape (fixing its `log1k` bug and generalizing the syntactic-multiplicity
-term -- see ../../ARCHITECTURE.md).
+"""Combines the semantic, vagueness, syntax and structure sub-scores, and the
+optional readability and coherence signals, into a single clarity score from
+0 to 100. The score is 100 minus a weighted average of the ambiguity of each
+signal.
 
 Readability and coherence are optional signals. readability_score is
 computed when include_readability is set and context_coherence when a

@@ -28,8 +28,6 @@ Usage examples::
 
     # Batch JSONL — one JSON object per line with "path" and optional "content" keys
     results = clarify("batch.jsonl")
-
-See ../../tools/PLAN_CLARIFY_WORKFLOW.md for the full design.
 """
 
 from __future__ import annotations

@@ -1,7 +1,6 @@
 """WordNet-backed polysemy (sense count) and specificity (hypernym depth)
-scoring, via the actively-maintained Open English Wordnet (see
-../../ARCHITECTURE.md decision #4), replacing starter.md's use of NLTK's
-frozen 2006 Princeton WordNet snapshot.
+scoring. It uses the Open English Wordnet, which is actively maintained,
+instead of the 2006 Princeton WordNet snapshot that NLTK ships.
 
 WordNet access is serialized by a module lock, so analyze() can be called
 from several threads at once.
@@ -59,10 +58,9 @@ def _get_or_create_cache() -> _WordCache:
         _word_cache = _WordCache()
     return _word_cache
 
-# Fallback for words with no WordNet entry at all (proper nouns, typos,
-# etc.) -- same default starter.md used: `1, 3` (one sense, a shallow
-# depth), so unknown words don't get penalized as maximally vague nor
-# rewarded as maximally specific.
+# Fallback for words with no WordNet entry at all, such as proper nouns and
+# typos: one sense and a shallow depth of 3, so unknown words are neither
+# penalized as maximally vague nor rewarded as maximally specific.
 _FALLBACK_SENSE_COUNT = 1
 _FALLBACK_MAX_DEPTH = 3.0
 

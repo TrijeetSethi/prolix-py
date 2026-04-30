@@ -1,10 +1,9 @@
 """Pattern-based syntactic-ambiguity detection.
 
-Replaces starter.md's hand-written 10-word CFG (which only ever parsed its
-own toy vocabulary) with detectors for well-documented English
-structural-ambiguity classes, run over POS tags / shallow chunks produced
-by NLTK. See ../../ARCHITECTURE.md decision #3 for the rationale and the
-list of rules still outstanding.
+Detects well-documented classes of English structural ambiguity with rules
+over the POS tags and shallow chunks that NLTK produces. Rules over tags work
+for any vocabulary, unlike a hand-written grammar, which parses only the
+words it lists. Only prepositional phrase attachment is detected so far.
 """
 
 from __future__ import annotations
@@ -52,9 +51,8 @@ class SyntaxReport:
 
     @property
     def ambiguity_score(self) -> float:
-        """Number of distinct ambiguity-pattern hits; 0 means no detected
-        structural ambiguity, matching the toy script's "single parse"
-        baseline (`syntactic_multiplier == 1` -> penalty 0)."""
+        """Number of ambiguity-pattern hits. 0 means that no structural
+        ambiguity was detected and the syntax penalty is 0."""
         return float(len(self.hits))
 
 
@@ -79,14 +77,13 @@ def _find_pp_attachment_hits(tree: nltk.Tree) -> list[AmbiguityHit]:
 
 
 # TODO(#2): coordination/conjunction-scope ambiguity, e.g. "old men and
-# women" ([JJ N] CC N vs JJ [N CC N]). See ARCHITECTURE.md decision #3.
+# women" ([JJ N] CC N vs JJ [N CC N]).
 def _find_coordination_scope_hits(tree: nltk.Tree) -> list[AmbiguityHit]:
     return []
 
 
 # TODO(#3): participle/gerund attachment ambiguity, e.g. sentence-initial
-# or post-NP VBG ("Flying planes can be dangerous"). See ARCHITECTURE.md
-# decision #3.
+# or post-NP VBG ("Flying planes can be dangerous").
 def _find_participle_attachment_hits(tree: nltk.Tree) -> list[AmbiguityHit]:
     return []
 

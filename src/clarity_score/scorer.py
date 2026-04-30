@@ -1,15 +1,14 @@
 """The pluggable semantic-ambiguity and coherence scoring interfaces.
 
-See ../../ARCHITECTURE.md decision #2: v1 ships only `WordnetPolysemyScorer`
-(WordNet sense-count based, no ML dependency). A future
-`TransformerSemanticScorer` -- sampling a masked-language model's
-contextual substitutions, per starter.md's original DeBERTa idea -- can
-implement `SemanticScorer` and be passed into `analyze()` without any
-change to `AnalysisResult` or `analyze()`'s signature.
+The package ships one `SemanticScorer`, `WordnetPolysemyScorer`, which
+counts WordNet senses and needs no machine learning dependency. Another
+scorer, such as one built on a masked language model, can implement
+`SemanticScorer` and be passed to `analyze()` without any change to
+`AnalysisResult` or the signature of `analyze()`.
 
-Phase B additions: `CoherenceScorer` Protocol for embedding-based contextual
-coherence scoring (measures whether content words in a sentence semantically
-relate to each other — orthogonal to per-word polysemy).
+`CoherenceScorer` is the interface for embedding-based contextual coherence
+scoring. It measures whether the content words in a sentence relate to each
+other, which is independent of per-word polysemy.
 """
 
 from __future__ import annotations
@@ -33,7 +32,7 @@ class SemanticScorer(Protocol):
 class WordnetPolysemyScorer:
     """Default `SemanticScorer`: log-scaled average WordNet sense count.
 
-    Fixes starter.md's `math.log1k` bug (not a real function) -> `math.log1p`.
+    Uses ln(1 + x) to dampen large sense counts.
     """
 
     def score(self, sentence: str, words: Sequence[str]) -> float:
@@ -51,7 +50,7 @@ class WordnetPolysemyScorer:
 
 
 # ============================================================
-# Coherence scoring (Phase B)
+# Coherence scoring
 # ============================================================
 
 
