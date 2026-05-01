@@ -370,7 +370,9 @@ def _cmd_dir(args: argparse.Namespace) -> int:
     if args.output and results:
         output_path = Path(args.output)
         suffix = output_path.suffix.lower()
-        keys = list(results[0][1].keys())
+        # structural_clarity is left out of rows for single-line files, so the
+        # header lists the keys of every row and a missing cell stays empty.
+        keys = list(dict.fromkeys(key for _, row in results for key in row))
 
         if suffix == ".json":
             # Export just the dicts (strip path keys for cleaner JSON)

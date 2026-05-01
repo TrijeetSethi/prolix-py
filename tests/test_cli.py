@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import io
 import json
 import os
@@ -230,6 +231,24 @@ class TestDirCLI:
         names = [d["name"] for d in data]
         assert "vague" in names
         assert "specific" in names
+
+    def test_dir_csv_single_line_file_first(self, tmp_path):
+        """A single-line file has no structural_clarity, and a later file can still add it."""
+        (tmp_path / "a").mkdir()
+        (tmp_path / "a" / "SKILL.md").write_text(
+            "Click the Save button to store the file.\n", encoding="utf-8",
+        )
+        (tmp_path / "b").mkdir()
+        (tmp_path / "b" / "SKILL.md").write_text(
+            "# Save files\n\nRun the build script.\n\n- Open the report.\n", encoding="utf-8",
+        )
+        output = tmp_path / "results.csv"
+        assert entry_dir([str(tmp_path), "--output", str(output)]) == 0
+        with output.open(newline="", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
+        assert [row["name"] for row in rows] == ["a", "b"]
+        assert rows[0]["structural_clarity"] == ""
+        assert float(rows[1]["structural_clarity"]) > 0
 
     def test_dir_nonexistent(self):
         """Directory scan fails gracefully for non-existent path."""
