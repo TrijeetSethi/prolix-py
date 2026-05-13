@@ -400,6 +400,33 @@ class TestBrokenPipe:
         assert _run_with_closed_stdout(*args) == (0, "")
 
 
+def _run_without_stdout(*args: str) -> tuple[int, str]:
+    """Run python -m clarity_score with file descriptor 1 closed, so sys.stdout is None."""
+    proc = subprocess.run(
+        [sys.executable, "-m", "clarity_score", *args],
+        stderr=subprocess.PIPE, preexec_fn=lambda: os.close(1), timeout=120,
+    )
+    return proc.returncode, proc.stderr.decode("utf-8", "replace")
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="preexec_fn is not available on Windows")
+class TestClosedStdout:
+    """A command started with stdout closed, as with >&-, keeps its exit code."""
+
+    @pytest.mark.parametrize(
+        "args", [["The dog ran."], ["The dog ran.", "--json"], ["dir", str(FIXTURE_DIR)]],
+        ids=["text", "json", "dir"],
+    )
+    def test_command_exits_0(self, args):
+        assert _run_without_stdout(*args) == (0, "")
+
+    def test_fail_under_exits_1(self):
+        code, stderr = _run_without_stdout("Do stuff.", "--fail-under", "99")
+        assert code == 1
+        assert stderr.startswith("fail: clarity ")
+        assert "Traceback" not in stderr
+
+
 # ============================================================
 # Model comparison (deprecated `compare` subcommand)
 # ============================================================

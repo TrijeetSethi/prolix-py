@@ -79,6 +79,12 @@ and 2 for a usage error, unreadable input or missing language data.
 _P = ParamSpec("_P")
 
 
+def _flush_stdout() -> None:
+    """Flush stdout, which Python sets to None when file descriptor 1 is closed."""
+    if sys.stdout is not None:
+        sys.stdout.flush()
+
+
 def _exit_quietly_on_broken_pipe(entry: Callable[_P, int]) -> Callable[_P, int]:
     """Make a command end without a message when its stdout reader closes early.
 
@@ -88,7 +94,8 @@ def _exit_quietly_on_broken_pipe(entry: Callable[_P, int]) -> Callable[_P, int]:
     pipe error keeps its exit status, so a score below --fail-under still
     exits with 1. A command stopped while it was still writing returns 0.
     The --help and --version options print and then raise SystemExit, so
-    their output is flushed inside the try as well.
+    their output is flushed inside the try as well. A closed stdout, which
+    Python sets to None, is not flushed.
     """
 
     @functools.wraps(entry)
@@ -98,13 +105,14 @@ def _exit_quietly_on_broken_pipe(entry: Callable[_P, int]) -> Callable[_P, int]:
             try:
                 code = entry(*args, **kwargs)
             except SystemExit:
-                sys.stdout.flush()
+                _flush_stdout()
                 raise
-            sys.stdout.flush()
+            _flush_stdout()
         except BrokenPipeError:
-            devnull = os.open(os.devnull, os.O_WRONLY)
-            os.dup2(devnull, sys.stdout.fileno())
-            os.close(devnull)
+            if sys.stdout is not None:
+                devnull = os.open(os.devnull, os.O_WRONLY)
+                os.dup2(devnull, sys.stdout.fileno())
+                os.close(devnull)
         return code
 
     return wrapper
