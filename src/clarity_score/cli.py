@@ -30,7 +30,7 @@ import time
 import warnings
 from collections.abc import Callable
 from pathlib import Path
-from typing import ParamSpec
+from typing import ParamSpec, TextIO
 
 from . import __version__
 
@@ -85,11 +85,37 @@ def _flush_stdout() -> None:
         sys.stdout.flush()
 
 
+def _silence_broken_stream(stream: TextIO | None) -> None:
+    """Point a stream at os.devnull when its reader has gone.
+
+    A stream that cannot be flushed would fail again when the interpreter
+    flushes it at exit, which then exits with 120. A stream that flushes is
+    left alone.
+    """
+    if stream is None:
+        return
+    try:
+        stream.flush()
+    except BrokenPipeError:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, stream.fileno())
+        os.close(devnull)
+
+
+def _report(message: str) -> None:
+    """Print one status line on stderr. A closed stderr cannot change the exit status."""
+    try:
+        print(message, file=sys.stderr)
+    except BrokenPipeError:
+        pass
+
+
 def _exit_quietly_on_broken_pipe(entry: Callable[_P, int]) -> Callable[_P, int]:
-    """Make a command end without a message when its stdout reader closes early.
+    """Make a command end without a message when its output reader closes early.
 
     The flush runs inside the try, so a closed pipe is caught here and not
-    reported by the interpreter at exit. Stdout then points at os.devnull, so
+    reported by the interpreter at exit. Stdout and stderr, which share the
+    pipe with 2>&1, then point at os.devnull if they cannot be flushed, so
     the flush at exit cannot fail again. A command that returned before the
     pipe error keeps its exit status, so a score below --fail-under still
     exits with 1. A command stopped while it was still writing returns 0.
@@ -109,10 +135,10 @@ def _exit_quietly_on_broken_pipe(entry: Callable[_P, int]) -> Callable[_P, int]:
                 raise
             _flush_stdout()
         except BrokenPipeError:
-            if sys.stdout is not None:
-                devnull = os.open(os.devnull, os.O_WRONLY)
-                os.dup2(devnull, sys.stdout.fileno())
-                os.close(devnull)
+            pass
+        finally:
+            for stream in (sys.stdout, sys.stderr):
+                _silence_broken_stream(stream)
         return code
 
     return wrapper
@@ -300,10 +326,10 @@ def _cmd_single(args: argparse.Namespace) -> int:
             print(f"{name} {value:.2f}" if isinstance(value, float) else f"{name} {value}")
 
     if scores.words == 0:
-        print("skipped: no words to score", file=sys.stderr)
+        _report("skipped: no words to score")
         return 0
     if scores.clarity < args.fail_under:
-        print(f"fail: clarity {scores.clarity:.2f} is below {args.fail_under:g}", file=sys.stderr)
+        _report(f"fail: clarity {scores.clarity:.2f} is below {args.fail_under:g}")
         return 1
     return 0
 

@@ -399,6 +399,22 @@ class TestBrokenPipe:
     def test_help_and_version_exit_0_when_stdout_closes(self, args):
         assert _run_with_closed_stdout(*args) == (0, "")
 
+    @pytest.mark.parametrize(
+        "args, expected",
+        [(["   "], 0), (["Do stuff.", "--fail-under", "99"], 1),
+         (["Do stuff.", "--json", "--fail-under", "99"], 1)],
+        ids=["skipped", "fail", "fail-json"],
+    )
+    def test_exit_code_kept_when_stderr_shares_the_closed_pipe(self, args, expected):
+        """With 2>&1 the skipped and fail lines go to the closed pipe as well."""
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "clarity_score", *args],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        )
+        assert proc.stdout is not None
+        proc.stdout.close()
+        assert proc.wait(timeout=120) == expected
+
 
 def _run_without_stdout(*args: str) -> tuple[int, str]:
     """Run python -m clarity_score with file descriptor 1 closed, so sys.stdout is None."""
