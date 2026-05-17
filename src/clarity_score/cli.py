@@ -217,11 +217,15 @@ def entry_compare(argv: list[str] | None = None) -> int:
     """Run the deprecated model comparison command.
 
     Model comparison is an experimental research tool. This function emits a
-    ``DeprecationWarning`` and will be removed in clarity-score 0.4.0.
+    ``DeprecationWarning`` and will be removed in clarity-score 0.4.0. It also
+    prints a warning line on stderr, because Python hides that warning from
+    the clarity-score command by default.
     """
     from .model_compare import _warn_deprecated
 
     _warn_deprecated("The compare subcommand of clarity_score.cli")
+    print("warning: the compare subcommand is deprecated and will be removed in "
+          "clarity-score 0.4.0", file=sys.stderr)
     parser = argparse.ArgumentParser(
         prog="python -m clarity_score.cli compare",
         description=(

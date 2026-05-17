@@ -38,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The default `clarity-score` command no longer downloads NLTK data. When language data is missing it prints the install commands and exits with code 2
 
 ### Deprecated
-- Model comparison is deprecated and will be removed in 0.4.0, because it is an experimental research tool. `clarity_score.compare_models()`, `clarity_score.model_compare.compare_models_benchmark()`, `clarity_score.cli.entry_compare()` and `python -m clarity_score.cli compare` still work and emit a `DeprecationWarning`
+- Model comparison is deprecated and will be removed in 0.4.0, because it is an experimental research tool. `clarity_score.compare_models()`, `clarity_score.model_compare.compare_models_benchmark()`, `clarity_score.cli.entry_compare()` and `python -m clarity_score.cli compare` still work and emit a `DeprecationWarning`. The `compare` subcommand of `clarity-score` also prints a `warning:` line on stderr, because Python does not show that warning to command line users by default
 
 ### Removed
 - The `clarity-score-compare` command is no longer installed. `python -m clarity_score.cli compare` runs the same deprecated comparison

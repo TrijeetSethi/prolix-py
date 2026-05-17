@@ -516,7 +516,10 @@ class TestModelCompare:
             rc = main(["compare", "--target", str(FIXTURE_DIR), "--output", str(output)])
         assert [w.category for w in record].count(DeprecationWarning) == 1
         assert rc == 1
-        assert "no comparison ran" in capsys.readouterr().err
+        err = capsys.readouterr().err
+        assert "no comparison ran" in err
+        # Python hides the DeprecationWarning from the installed command, so it prints this line.
+        assert err.startswith("warning: the compare subcommand is deprecated and will be removed")
         assert not output.exists()
 
 
