@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import csv
 import functools
+import io
 import json
 import os
 import statistics as _stats
@@ -198,6 +199,10 @@ def entry_single(argv: list[str] | None = None) -> int:
 @_exit_quietly_on_broken_pipe
 def entry_dir(argv: list[str] | None = None) -> int:
     """Entry point for ``clarity-score dir`` and its ``clarity-score-dir`` alias."""
+    # Directory and file names are printed with backslash escapes when stdout
+    # cannot encode them, as with redirected output on Windows.
+    if isinstance(sys.stdout, io.TextIOWrapper):
+        sys.stdout.reconfigure(errors="backslashreplace")
     parser = argparse.ArgumentParser(
         prog="clarity-score dir",
         description="Score all files in a directory.",

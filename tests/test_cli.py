@@ -269,6 +269,20 @@ class TestDirCLI:
         assert "ok    specific" in proc.stdout
         assert "ok    vague" in proc.stdout
 
+    def test_dir_non_ascii_name_on_ascii_stdout(self, tmp_path):
+        """A name stdout cannot encode is printed with backslash escapes."""
+        for name in ("plain", "\u65e5\u672c"):
+            (tmp_path / name).mkdir()
+            (tmp_path / name / "SKILL.md").write_text("Run the build script.\n", encoding="utf-8")
+        env = {**os.environ, "PYTHONIOENCODING": "ascii"}
+        proc = subprocess.run(
+            [sys.executable, "-m", "clarity_score", "dir", str(tmp_path)],
+            capture_output=True, encoding="utf-8", env=env,
+        )
+        assert proc.returncode == 0, proc.stderr
+        assert "ok    plain" in proc.stdout
+        assert "ok    \\u65e5\\u672c" in proc.stdout
+
 
 # ============================================================
 # Main dispatcher (backward compatibility)
