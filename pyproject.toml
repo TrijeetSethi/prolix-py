@@ -58,8 +58,9 @@ clarity-score-dir = "clarity_score.cli:entry_dir"
 [tool.hatch.version]
 path = "src/clarity_score/__init__.py"
 
-[tool.hatch.build.targets.sdist.force-include]
-"../fixtures" = "tests/fixtures"
+# hatch_build.py copies ../fixtures into tests/fixtures when it builds the sdist
+# from a source checkout.
+[tool.hatch.build.targets.sdist.hooks.custom]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/clarity_score"]
