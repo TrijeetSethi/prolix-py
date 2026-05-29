@@ -76,7 +76,7 @@ print(scores.to_dict())
 
 Every score runs from 0 to 100 and a higher value always means clearer text. The clarity field is the headline score. It combines lexical clarity, which is high when words have few dictionary senses, specificity, which is high when the vocabulary is precise and free of vague words, and syntax, which is high when sentences avoid structurally ambiguous patterns. The readability field is the Flesch reading ease score and is reported next to the headline without changing it. The words field counts the words that were scored, so you can weight averages across many texts.
 
-Create one Clarity object and reuse it. It can be shared between threads and passed to worker processes. Text with no words of two or more letters scores 0 on every field.
+Create one Clarity object and reuse it. It can be shared between threads and passed to worker processes. Threads can share it only when clarity_score opens WordNet before your application uses the wn package itself, so create the Clarity object first or use processes. Text with no words of two or more letters scores 0 on every field.
 
 Add words that count as vague in your own field.
 
