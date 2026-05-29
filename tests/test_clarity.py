@@ -125,6 +125,13 @@ def test_extra_vague_words_ignore_case_and_extra_spaces():
     assert clarity.score(text).specificity < Clarity().score(text).specificity
 
 
+def test_extra_vague_words_with_non_letters_never_match():
+    # Vague phrases are matched only against words made of letters, as the README says.
+    text = "We offer a cutting-edge, best-in-class solution for the 2nd team"
+    clarity = Clarity(extra_vague_words=["cutting-edge", "best-in-class", "2nd team"])
+    assert clarity.score(text) == Clarity().score(text)
+
+
 def test_missing_wordnet_raises_lookup_error(tmp_path):
     script = textwrap.dedent(
         """

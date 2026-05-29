@@ -84,6 +84,11 @@ Add words that count as vague in your own field.
 clarity = Clarity(extra_vague_words=["synergy", "leverage"])
 ```
 
+Matching ignores case and extra spaces, and an entry can be a phrase of
+several words. Entries are matched only against words made of letters, so an
+entry that contains a hyphen, an apostrophe or a digit, such as cutting-edge,
+never matches.
+
 ## What the score means
 
 The clarity score is an uncalibrated heuristic. It has not been validated
