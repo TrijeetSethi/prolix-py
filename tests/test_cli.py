@@ -98,6 +98,13 @@ class TestSingleFileCLI:
         clarity = Clarity().score("Use the thing.").clarity
         assert entry_single(["Use the thing.", "--fail-under", str(clarity)]) == 0
 
+    @pytest.mark.parametrize("value", ["nan", "inf", "-inf", "high"])
+    def test_fail_under_must_be_a_finite_number(self, value, capsys):
+        with pytest.raises(SystemExit) as exc_info:
+            entry_single(["Use the thing to do stuff.", "--fail-under", value])
+        assert exc_info.value.code == 2
+        assert "--fail-under" in capsys.readouterr().err
+
     def test_readability_and_coherence_flags_are_gone(self, capsys):
         for flag in ("--readability", "--coherence"):
             with pytest.raises(SystemExit) as exc_info:

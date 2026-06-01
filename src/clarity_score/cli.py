@@ -24,6 +24,7 @@ import csv
 import functools
 import io
 import json
+import math
 import os
 import statistics as _stats
 import sys
@@ -78,6 +79,17 @@ and 2 for a usage error, unreadable input or missing language data.
 
 
 _P = ParamSpec("_P")
+
+
+def _finite_float(value: str) -> float:
+    """Parse a --fail-under value, rejecting NaN and infinity with a usage error."""
+    try:
+        number = float(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"invalid number: {value!r}") from None
+    if not math.isfinite(number):
+        raise argparse.ArgumentTypeError(f"must be a finite number, not {value!r}")
+    return number
 
 
 def _flush_stdout() -> None:
@@ -188,7 +200,7 @@ def entry_single(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--json", action="store_true", help="print the scores as a JSON object")
     parser.add_argument(
-        "--fail-under", type=float, default=0.0, metavar="SCORE",
+        "--fail-under", type=_finite_float, default=0.0, metavar="SCORE",
         help="exit with code 1 if the clarity score is below SCORE",
     )
 
