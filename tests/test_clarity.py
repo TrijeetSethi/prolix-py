@@ -213,16 +213,18 @@ def test_one_instance_can_be_shared_between_threads(monkeypatch):
     assert threaded == serial
 
 
-def test_pickle_round_trip():
+@pytest.mark.parametrize("protocol", range(pickle.HIGHEST_PROTOCOL + 1))
+@pytest.mark.parametrize("words", [[], ["synergy"]], ids=["default", "extra"])
+def test_pickle_round_trip(protocol, words):
     # Pickling is how a Clarity object reaches multiprocessing workers.
     text = "Use synergy to grow the team"
-    clarity = Clarity(extra_vague_words=["synergy"])
-    restored = pickle.loads(pickle.dumps(clarity))
+    clarity = Clarity(extra_vague_words=words)
+    restored = pickle.loads(pickle.dumps(clarity, protocol=protocol))
     assert repr(restored) == repr(clarity)
     assert restored.score(text) == clarity.score(text)
 
     scores = clarity.score(text)
-    assert pickle.loads(pickle.dumps(scores)) == scores
+    assert pickle.loads(pickle.dumps(scores, protocol=protocol)) == scores
 
 
 def test_scores_are_immutable_and_hashable():

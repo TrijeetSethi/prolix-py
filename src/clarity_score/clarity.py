@@ -169,6 +169,14 @@ class Clarity:
     def __repr__(self) -> str:
         return f"Clarity(extra_vague_words={list(self._extra_vague_words)!r})"
 
+    # A class with __slots__ needs these to pickle with protocols 0 and 1. The
+    # state is a dict, so it is never empty and always reaches __setstate__.
+    def __getstate__(self) -> dict[str, tuple[str, ...]]:
+        return {"extra_vague_words": self._extra_vague_words}
+
+    def __setstate__(self, state: dict[str, tuple[str, ...]]) -> None:
+        self._extra_vague_words = tuple(state["extra_vague_words"])
+
     def score(self, text: str, /) -> ClarityScores:
         """Score one text.
 
