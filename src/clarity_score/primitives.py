@@ -50,7 +50,7 @@ class ClarityPrimitives:
     specificity: float                 # 0-100, higher=more specific
     vagueness: float                   # 0-100 (= 100 - specificity)
     syntax_penalty: float              # 0-10 (capped at 10), higher=more ambiguous
-    readability_score: Optional[float] # 0-100, higher=easier to read; None if disabled
+    readability_score: Optional[float] # 25 to 100, higher=easier to read; None if disabled
     coherence: Optional[float]         # 0-100, higher=better flow; None if disabled
     structural_clarity: Optional[float]# 0-100, higher=well-structured; None for single-line text
     word_count: Optional[int] = None   # words of 2 or more letters; None in older records

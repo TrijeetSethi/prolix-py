@@ -331,8 +331,9 @@ print([hit.phrase for hit in result.vague_hits])
 print(result.to_dict())
 ```
 
-`readability_score` maps the Flesch reading ease score onto the range 0 to 100,
-so it is not the same number as the readability field of Clarity.
+`readability_score` maps the Flesch reading ease score onto the range 25 to 100
+with a square root, so it is not the same number as the readability field of
+Clarity.
 `readability_score` and `context_coherence` are reported next to
 `clarity_score` and change it only when the readability or coherence weight of
 `ScoreWeights` is above zero.

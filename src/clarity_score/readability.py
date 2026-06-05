@@ -50,7 +50,7 @@ class ReadabilityMetrics:
         self.coleman_liau_index = coleman_liau_index
 
     def to_clarity_score(self) -> float:
-        """Convert FRE (0-100, higher=easier) to clarity score (0-100, higher=clearer).
+        """Map Flesch reading ease to a score from 25 to 100, where higher is easier to read.
 
         Mapping:
             clarity = 25 + 75 * sqrt(FRE / 100), with FRE clamped to 0 to 100
