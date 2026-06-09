@@ -68,14 +68,23 @@ def test_segmented_hits_match_whole_stream_on_fixture_skills(kind):
 
 
 def test_long_tagged_stream_is_linear():
-    # Chunking 100,000 tokens as one stream takes several seconds and can
-    # hit NLTK's regular-expression time limit. Chunking per sentence does not.
+    # NLTK chunks one stream in quadratic time. Chunking per sentence is
+    # linear, so 16 times the tokens take about 16 times as long, where one
+    # stream takes about 50 times as long. A ratio does not depend on the
+    # speed of the machine, and the best of three runs damps noise.
     sentence = [
         ("I", "PRP"), ("saw", "VBD"), ("the", "DT"), ("man", "NN"),
         ("with", "IN"), ("the", "DT"), ("telescope", "NN"), (".", "."),
     ]
-    tagged = sentence * 12_500
-    start = time.perf_counter()
-    report = analyze_syntax(tagged)
-    assert time.perf_counter() - start < 5.0
-    assert len(report.hits) == 12_500
+
+    def best_time(count):
+        tagged = sentence * count
+        times = []
+        for _ in range(3):
+            start = time.perf_counter()
+            report = analyze_syntax(tagged)
+            times.append(time.perf_counter() - start)
+        assert len(report.hits) == count
+        return min(times)
+
+    assert best_time(4_000) / best_time(250) < 32
