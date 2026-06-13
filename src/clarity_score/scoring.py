@@ -212,7 +212,7 @@ def analyze(
         semantic_scorer: Semantic scorer for polysemy analysis. Defaults to
             WordnetPolysemyScorer.
         extra_vague_words: Additional vague words to check against. A single
-            string counts as one entry.
+            string counts as one entry. Entries are normalized like the text.
         include_readability: Whether to compute readability_score. It changes
             clarity_score only when weights.readability is above 0, which it
             is not by default.
@@ -244,7 +244,11 @@ def analyze(
 
     syntax_report = analyze_syntax(tagged)
     lexical_report = analyze_lexical(words)
-    vague_hits = find_vague_hits(_vague_tokens(tagged), extra_vague_words=extra_vague_words)
+    if isinstance(extra_vague_words, str):
+        extra_vague_words = [extra_vague_words]
+    # Extra entries are normalized like the text, so they match the same words.
+    extra = [_normalize_text(word) for word in extra_vague_words or ()]
+    vague_hits = find_vague_hits(_vague_tokens(tagged), extra_vague_words=extra)
 
     # Compute readability if requested (always available — no feature check needed)
     readability_score = None

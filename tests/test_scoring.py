@@ -98,6 +98,14 @@ def test_vague_phrase_with_one_letter_word_matches():
     assert [hit.phrase for hit in result.vague_hits] == ["a lot"]
 
 
+@pytest.mark.parametrize("form", ["NFC", "NFD"])
+def test_decomposed_extra_vague_word_matches(form):
+    text = unicodedata.normalize(form, "Order the Caf\u00e9 menu for Friday")
+    word = unicodedata.normalize("NFD", "Caf\u00e9")
+    result = analyze(text, extra_vague_words=[word])
+    assert [hit.phrase for hit in result.vague_hits] == ["caf\u00e9"]
+
+
 def test_empty_extra_vague_word_is_ignored():
     result = analyze("Keep the file. Run the tests.", extra_vague_words=["", "  "])
     assert result.vague_hits == []

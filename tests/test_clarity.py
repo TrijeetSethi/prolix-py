@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import textwrap
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -123,6 +124,16 @@ def test_extra_vague_words_ignore_case_and_extra_spaces():
 
     text = "We circle back to the invoices every morning"
     assert clarity.score(text).specificity < Clarity().score(text).specificity
+
+
+@pytest.mark.parametrize("form", ["NFC", "NFD"])
+def test_decomposed_extra_vague_word_matches(form):
+    # Entries are normalized like the text, as the Rust crate does.
+    text = unicodedata.normalize(form, "Order the Caf\u00e9 menu for Friday")
+    decomposed = Clarity(extra_vague_words=[unicodedata.normalize("NFD", "Caf\u00e9")])
+    assert repr(decomposed) == "Clarity(extra_vague_words=['caf\u00e9'])"
+    assert decomposed.score(text).specificity < Clarity().score(text).specificity
+    assert decomposed.score(text) == Clarity(extra_vague_words=["caf\u00e9"]).score(text)
 
 
 def test_extra_vague_words_with_non_letters_never_match():

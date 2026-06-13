@@ -160,7 +160,8 @@ class Clarity:
         for item in extra_vague_words:
             if not isinstance(item, str):
                 raise TypeError(f"extra_vague_words items must be str, not {type(item).__name__}")
-            phrase = " ".join(item.lower().split())
+            # The same Unicode form and ASCII punctuation as the scored text.
+            phrase = " ".join(_normalize_text(item).lower().split())
             if phrase:
                 phrases.add(phrase)
         self._extra_vague_words: tuple[str, ...] = tuple(sorted(phrases))
