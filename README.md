@@ -168,7 +168,7 @@ followed by its value. With `--json` it prints a JSON object with the same
 keys as `ClarityScores.to_dict`, in the same order. `--fail-under` is compared
 with the clarity field, with or without `--json`. Input with no words to score is
 reported as skipped on standard error and exits with 0, even when
-`--fail-under` is set.
+`--fail-under` is set. Without `--json` it prints no scores.
 
 The exit status is 0 on success, 1 when the clarity score is below
 `--fail-under`, and 2 for a usage error, input that cannot be read or decoded

@@ -70,8 +70,8 @@ to score it as text.
 The output has one line for each of the clarity, lexical, specificity, syntax
 and readability scores and one for the number of words scored. --json prints
 the same fields as a JSON object. Every score runs from 0 to 100 and a higher
-value means clearer text. Input with no words to score is reported as skipped
-and passes --fail-under.
+value means clearer text. Input with no words to score is reported as skipped,
+prints no scores without --json and passes --fail-under.
 
 The exit status is 0 on success, 1 when the clarity score is below --fail-under,
 and 2 for a usage error, unreadable input or missing language data.
@@ -342,7 +342,8 @@ def _cmd_single(args: argparse.Namespace) -> int:
 
     if args.json:
         print(json.dumps(scores.to_dict(), indent=2))
-    else:
+    elif scores.words > 0:
+        # Text with no words prints no score lines, as the Rust command does.
         for name, value in scores.to_dict().items():
             print(f"{name} {value:.2f}" if isinstance(value, float) else f"{name} {value}")
 

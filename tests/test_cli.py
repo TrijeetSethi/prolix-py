@@ -86,6 +86,11 @@ class TestSingleFileCLI:
         assert entry_single(["1234 5678", "--fail-under", "50"]) == 0
         assert "skipped: no words to score" in capsys.readouterr().err
 
+    def test_no_words_prints_no_score_lines(self, capsys):
+        """Plain output for text with no words is empty, as in the Rust command."""
+        assert entry_single(["   "]) == 0
+        assert capsys.readouterr() == ("", "skipped: no words to score\n")
+
     def test_fail_under_json_exit_code(self, capsys):
         assert entry_single(["Use the thing.", "--json", "--fail-under", "99"]) == 1
         assert json.loads(capsys.readouterr().out)["clarity"] < 99
