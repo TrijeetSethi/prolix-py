@@ -11,6 +11,6 @@
 {"id": "readability-hard-many-polysyllabic", "sentence": "The circumnavigation necessitated sophisticated navigational instruments.", "notes": "long sentence full of polysyllabic words — should score low on readability", "expect": {"max_readability_clarity": 60}}
 {"id": "readability-moderate", "sentence": "I saw the man with the telescope.", "notes": "standard English sentence — moderate readability expected", "expect": {}}
 
-{"id": "coherence-specific-high", "sentence": "Assemble a peanut butter and jelly sandwich.", "notes": "concrete, domain-coherent content words should produce high coherence score", "expect": {"min_context_coherence": 55}}
-{"id": "coherence-incongruous-low", "sentence": "The quantum device stirred the sandwich with precision.", "notes": "all specific words but semantically incongruous — low coherence expected", "expect": {"max_context_coherence": 45}}
-{"id": "coherence-vague-vs-specific", "sentence": "Make some stuff with things and handle it basically.", "notes": "vague sentence with vague content words — should have lower coherence than specific equivalent", "expect": {"min_readability_clarity": 60, "min_context_coherence": 30}}
+{"id": "coherence-specific-high", "sentence": "Assemble a peanut butter and jelly sandwich.", "notes": "concrete, domain-coherent content words should produce high coherence score", "expect": {}}
+{"id": "coherence-incongruous-low", "sentence": "The quantum device stirred the sandwich with precision.", "notes": "all specific words but semantically incongruous — low coherence expected", "expect": {}}
+{"id": "coherence-vague-vs-specific", "sentence": "Make some stuff with things and handle it basically.", "notes": "vague sentence with vague content words — should have lower coherence than specific equivalent", "expect": {"min_readability_clarity": 60}}

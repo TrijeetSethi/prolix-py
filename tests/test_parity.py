@@ -1,14 +1,27 @@
-"""Exercises the shared fixtures/sentences.jsonl corpus.
+"""Check the shared fixtures/sentences.jsonl corpus.
 
-This file is also read by rust/tests/parity.rs. It's the cross-language
-contract described in ARCHITECTURE.md decision #1: since the two
-implementations are independent, we assert *relative* orderings and
-threshold properties here rather than exact-float parity.
+rust/tests/parity.rs reads the same corpus and makes the same checks. The two
+packages use different taggers and different copies of WordNet, so neither
+suite compares scores across languages. Each suite checks that its own package
+orders the two rows of each pair_group as expected and meets the threshold
+expectations of each row.
 """
 
 from __future__ import annotations
 
+from clarity_score.readability import text_to_clarity_score
 from clarity_score.scoring import analyze
+
+# Every expect key that this suite and rust/tests/parity.rs check.
+_EXPECT_KEYS = {
+    "pair_group",
+    "pair_role",
+    "min_pp_attachment_hits",
+    "max_pp_attachment_hits",
+    "min_avg_senses",
+    "min_readability_clarity",
+    "max_readability_clarity",
+}
 
 _METRIC_BY_PAIR_GROUP = {
     "sandwich-specificity": lambda result: result.specificity,
@@ -56,3 +69,24 @@ def test_min_avg_senses(fixture_sentences):
         if "min_avg_senses" in expect:
             result = analyze(row["sentence"])
             assert result.lexical.avg_senses >= expect["min_avg_senses"], row["id"]
+
+
+def test_readability_thresholds(fixture_sentences):
+    checked = 0
+    for row in fixture_sentences:
+        expect = row.get("expect", {})
+        if "min_readability_clarity" in expect:
+            score = text_to_clarity_score(row["sentence"])
+            assert score >= expect["min_readability_clarity"], (row["id"], score)
+            checked += 1
+        if "max_readability_clarity" in expect:
+            score = text_to_clarity_score(row["sentence"])
+            assert score <= expect["max_readability_clarity"], (row["id"], score)
+            checked += 1
+    assert checked, "expected at least one readability expectation in the fixture corpus"
+
+
+def test_every_expect_key_is_checked(fixture_sentences):
+    for row in fixture_sentences:
+        unknown = set(row.get("expect", {})) - _EXPECT_KEYS
+        assert not unknown, f"{row['id']}: no test checks {sorted(unknown)}"
