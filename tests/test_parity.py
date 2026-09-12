@@ -9,6 +9,10 @@ expectations of each row.
 
 from __future__ import annotations
 
+import dataclasses
+import math
+
+from clarity_score import Clarity, ClarityScores
 from clarity_score.readability import text_to_clarity_score
 from clarity_score.scoring import analyze
 
@@ -28,8 +32,15 @@ _METRIC_BY_PAIR_GROUP = {
     "vagueness": lambda result: result.clarity_score,
 }
 
+# The ClarityScores field that each pair_group is about.
+_CLARITY_METRIC_BY_PAIR_GROUP = {
+    "sandwich-specificity": lambda scores: scores.specificity,
+    "vagueness": lambda scores: scores.clarity,
+}
 
-def test_pair_groups_order_as_expected(fixture_sentences):
+
+def _pair_groups(fixture_sentences) -> dict[str, dict[str, str]]:
+    """Return the sentences of each pair_group, keyed by group and then by pair_role."""
     by_group: dict[str, dict[str, str]] = {}
     for row in fixture_sentences:
         expect = row.get("expect", {})
@@ -38,9 +49,13 @@ def test_pair_groups_order_as_expected(fixture_sentences):
             by_group.setdefault(group, {})[expect["pair_role"]] = row["sentence"]
 
     assert by_group, "expected at least one pair_group in the fixture corpus"
-
     for group, roles in by_group.items():
         assert "low" in roles and "high" in roles, f"incomplete pair for {group!r}"
+    return by_group
+
+
+def test_pair_groups_order_as_expected(fixture_sentences):
+    for group, roles in _pair_groups(fixture_sentences).items():
         metric = _METRIC_BY_PAIR_GROUP[group]
         low_result = analyze(roles["low"])
         high_result = analyze(roles["high"])
@@ -90,3 +105,37 @@ def test_every_expect_key_is_checked(fixture_sentences):
     for row in fixture_sentences:
         unknown = set(row.get("expect", {})) - _EXPECT_KEYS
         assert not unknown, f"{row['id']}: no test checks {sorted(unknown)}"
+
+
+def test_pair_groups_order_as_expected_through_clarity(fixture_sentences):
+    """The same pairs scored through Clarity, as in rust/tests/parity.rs.
+
+    The headline orders every pair, and each group's own field orders it too.
+    """
+    clarity = Clarity()
+    for group, roles in _pair_groups(fixture_sentences).items():
+        low = clarity.score(roles["low"])
+        high = clarity.score(roles["high"])
+        assert low.clarity < high.clarity, (group, low, high)
+        metric = _CLARITY_METRIC_BY_PAIR_GROUP[group]
+        assert metric(low) < metric(high), (group, low, high)
+
+
+def test_clarity_fields_match_the_shared_list(clarity_fields, fixture_sentences):
+    assert len(clarity_fields) == 6
+    assert [field.name for field in dataclasses.fields(ClarityScores)] == clarity_fields
+    clarity = Clarity()
+    for row in fixture_sentences:
+        assert list(clarity.score(row["sentence"]).to_dict()) == clarity_fields, row["id"]
+
+
+def test_clarity_scores_are_finite_rounded_and_in_range(fixture_sentences):
+    clarity = Clarity()
+    for row in fixture_sentences:
+        for name, value in clarity.score(row["sentence"]).to_dict().items():
+            if name == "words":
+                assert type(value) is int and value >= 0, (row["id"], value)
+                continue
+            assert type(value) is float, (row["id"], name, value)
+            assert math.isfinite(value) and 0.0 <= value <= 100.0, (row["id"], name, value)
+            assert round(value, 2) == value, (row["id"], name, value)

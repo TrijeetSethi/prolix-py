@@ -1,0 +1,6 @@
+clarity
+lexical
+specificity
+syntax
+readability
+words

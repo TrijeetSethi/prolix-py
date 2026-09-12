@@ -10,6 +10,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 _LOCAL_FIXTURES = Path(__file__).resolve().parent / "fixtures"
 FIXTURES_DIR = _LOCAL_FIXTURES if _LOCAL_FIXTURES.is_dir() else REPO_ROOT / "fixtures"
 FIXTURES_PATH = FIXTURES_DIR / "sentences.jsonl"
+CLARITY_FIELDS_PATH = FIXTURES_DIR / "clarity_fields.txt"
 
 
 def load_fixture_sentences() -> list[dict]:
@@ -25,3 +26,10 @@ def load_fixture_sentences() -> list[dict]:
 @pytest.fixture(scope="session")
 def fixture_sentences() -> list[dict]:
     return load_fixture_sentences()
+
+
+@pytest.fixture(scope="session")
+def clarity_fields() -> list[str]:
+    """The ClarityScores field names in contract order, shared with the Rust suite."""
+    lines = CLARITY_FIELDS_PATH.read_text(encoding="utf-8").splitlines()
+    return [line.strip() for line in lines if line.strip()]
