@@ -199,9 +199,18 @@ class TestSingleFileCLI:
         expected = Clarity().score("Update the README.md").to_dict()
         assert json.loads(capsys.readouterr().out) == expected
 
-    def test_empty_input_exits_2(self, capsys):
-        assert entry_single([""]) == 2
-        assert "no sentence or file specified" in capsys.readouterr().err
+    def test_empty_input_is_text_with_no_words(self, capsys):
+        """An empty INPUT is text, not the current directory, as in the Rust command."""
+        from clarity_score.cli import main
+
+        assert entry_single(["", "--fail-under", "50"]) == 0
+        assert capsys.readouterr() == ("", "skipped: no words to score\n")
+
+        assert main(["--json", ""]) == 0
+        captured = capsys.readouterr()
+        assert json.loads(captured.out) == Clarity().score("").to_dict()
+        assert json.loads(captured.out)["words"] == 0
+        assert captured.err == "skipped: no words to score\n"
 
 
 # ============================================================

@@ -42,7 +42,7 @@ __all__ = ["main", "entry_single", "entry_dir", "entry_compare"]
 # which reports a failed run or a score below --fail-under.
 _EXIT_MISSING_DATA = 2
 
-# Exit code for empty, missing or unreadable input to clarity-score.
+# Exit code for missing or unreadable input to clarity-score.
 _EXIT_BAD_INPUT = 2
 
 # A single word with one of these suffixes is taken to be a file path.
@@ -295,12 +295,6 @@ def _cmd_single(args: argparse.Namespace) -> int:
     from .clarify import _read_content, _strip_frontmatter
     from .clarity import Clarity
 
-    if not args.input:
-        print("Error: no sentence or file specified. Usage:\n"
-              "  clarity-score \"The cat sat on the mat.\" --json\n"
-              "  clarity-score my-skill.md --json", file=sys.stderr)
-        return _EXIT_BAD_INPUT
-
     text = args.input
     if args.input == "-":
         # Read standard input like a file: UTF-8, front matter stripped.
@@ -313,8 +307,10 @@ def _cmd_single(args: argparse.Namespace) -> int:
         except (OSError, UnicodeDecodeError) as exc:
             print(f"error: cannot read standard input: {exc}", file=sys.stderr)
             return _EXIT_BAD_INPUT
-    else:
-        # Check if it's a file path that exists, or treat as a sentence
+    elif args.input:
+        # Check if it's a file path that exists, or treat as a sentence. An
+        # empty argument is text with no words, because Path("") is the
+        # current directory.
         path = Path(args.input)
         try:
             is_file = path.is_file()
