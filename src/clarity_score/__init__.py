@@ -18,7 +18,7 @@ may change in any minor release before 1.0.
 
 from __future__ import annotations
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 from .clarity import Clarity, ClarityScores
 from .lexical import LexicalReport, WordLexicalInfo, analyze_lexical
