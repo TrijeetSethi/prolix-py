@@ -20,12 +20,12 @@ version number names one Clarity contract in both packages.
 - Creating a `Clarity` never downloads anything and raises `LookupError` naming the install commands when the NLTK or WordNet data is missing. One `Clarity` object can be pickled and shared between threads, as long as it is created before the application opens WordNet through the `wn` package itself.
 - Adding `Clarity` does not change `analyze()` scores, which differ from `Clarity` scores by design.
 - `clarity-score` scores its input with `Clarity` and prints the six `ClarityScores` fields, one line per field with the field name followed by the value. `--json` prints an object with exactly the keys of `ClarityScores.to_dict()`, which are `clarity`, `lexical`, `specificity`, `syntax`, `readability` and `words`. `--fail-under` is compared with `clarity`. Before, the command printed `analyze()` results, which `clarity-score dir` still prints.
-- The README states the stability policy. The names `Clarity`, `ClarityScores`, `score`, `extra_vague_words` and `to_dict`, the six fields with their order, types and range, the `--json` and `--fail-under` options, the `--json` keys and the exit codes 0, 1 and 2 are stable from this release. A minor release may change score values, and each such change is listed under Scoring changes with before and after values for `fixtures/sentences.jsonl`. A patch release never changes a score for the same input and the same data.
+- The README states the stability policy. The names `Clarity`, `ClarityScores`, `score`, `extra_vague_words` and `to_dict`, the six fields with their order, types and range, the `--json` and `--fail-under` options, the `--json` keys and the exit codes 0, 1 and 2 are stable from this release. A minor release may change score values, and each such change is listed under Scoring changes with before and after values for `tests/fixtures/sentences.jsonl`. A patch release never changes a score for the same input and the same data.
 
 ### Scoring changes
 - The structure signal counts a sentence as an action sentence only when its first word is a listed action verb. Before, any first word of 3 or more letters counted, so descriptive prose and gibberish got full action credit. Prose that does not start with a listed verb now scores up to 5 points lower at the default weights. The list adds click, open, select, type, enter, press, go, choose, navigate, save, close, copy, paste, rename, move, sort, download, upload, fix, find, show and list. A sentence that starts with go, which has only 2 letters, now scores up to 5 points higher.
 - Headings, list items and sentences inside fenced code blocks no longer count toward the structure signal, so a `# comment` line in a shell example is not a heading. Code blocks are still counted.
-- `analyze()` and `extract_primitives()` compute `structural_clarity` only when the text, with leading and trailing whitespace removed, spans more than one line. For a single line it is `None` and its weight is shared among the other signals, so at the default weights the line scores with semantic 0.4, vagueness 0.4 and syntax 0.2, the blend the Rust crate uses. The one-line inputs in `fixtures/sentences.jsonl` score 4 to 12 points higher than with the structure signal. `clarity-score dir` leaves the `structural_clarity` cell of a single-line file empty in CSV output and omits the key in JSON output.
+- `analyze()` and `extract_primitives()` compute `structural_clarity` only when the text, with leading and trailing whitespace removed, spans more than one line. For a single line it is `None` and its weight is shared among the other signals, so at the default weights the line scores with semantic 0.4, vagueness 0.4 and syntax 0.2, the blend the Rust crate uses. The one-line inputs in `tests/fixtures/sentences.jsonl` score 4 to 12 points higher than with the structure signal. `clarity-score dir` leaves the `structural_clarity` cell of a single-line file empty in CSV output and omits the key in JSON output.
 - `analyze()` and `extract_primitives()` match vague phrases over every word, including one-letter words, so the list entries `a lot` and `a bit` now match. A phrase no longer matches across punctuation, so `Choose the merge sort. Of the two outputs, keep the first.` no longer counts `sort of`. The vague ratio is still divided by the distinct words of two or more letters. An entry in `extra_vague_words` has runs of whitespace collapsed to one space, and an empty entry is ignored.
 - `analyze()` and `extract_primitives()` clamp `semantic_ambiguity` to the range 0 to 100, as `ClarityPrimitives` documents, including the value from a custom `SemanticScorer`. Before, very polysemous short inputs went above 100 and lost more clarity. For example `Break cut.` had a `semantic_ambiguity` of 128.92 and now has 100, and its clarity score rises from 20.94 to 32.51.
 - `analyze()` and `extract_primitives()` convert the text to Unicode NFC form and read typographic apostrophes (U+2018, U+2019 and U+02BC), double quotes (U+201C and U+201D) and hyphens (U+2010 and U+2011) as their ASCII forms before scoring, so text from a word processor scores the same as the same text typed in ASCII. Before, a curly apostrophe split `don’t` into `Don`, `’` and `t`, and an accented letter in decomposed form made its word drop out of the score. `AnalysisResult.sentence` keeps the text as given. `analyze()` and `Clarity` convert each `extra_vague_words` entry the same way, so an entry typed in decomposed form matches the same words as the text.
@@ -35,7 +35,7 @@ version number names one Clarity contract in both packages.
 
 The table gives `analyze(text).clarity_score` in the 0.2.0 source and in this
 release, and `Clarity().score(text).clarity`, which is new in this release,
-for each line of `fixtures/sentences.jsonl`. The values were measured with
+for each line of `tests/fixtures/sentences.jsonl`. The values were measured with
 Open English WordNet 2025 (`oewn:2025`), NLTK 3.10.3 and wn 1.1.1.
 
 | Fixture | analyze 0.2.0 | analyze 0.3.0 | Clarity 0.3.0 |
@@ -56,6 +56,7 @@ Open English WordNet 2025 (`oewn:2025`), NLTK 3.10.3 and wn 1.1.1.
 | `coherence-vague-vs-specific` | 29.75 | 29.66 | 26.66 |
 
 ### Added
+- `clarify()` takes `weights`, `semantic_scorer` and `extra_vague_words` and passes them to `analyze()` for every file or entry it scores, in single file, directory and batch modes. Before, `clarify()` always scored with the defaults.
 - `clarify()` takes `on_error="skip"` (the default) or `on_error="raise"`. With `"raise"`, directory and batch modes raise the first error from a file or entry instead of skipping it. Any other value raises `ValueError`.
 - `AnalysisResult.to_dict()` returns the result as a dict. `to_json()` returns the same dict and is kept for compatibility.
 - `AnalysisResult.word_count` is the number of scored words, the tokens of two or more letters, and `to_dict()` includes it as `word_count`. `ClarityPrimitives` has a matching `word_count` field at the end, which is `None` for a record written by an older version.
@@ -85,6 +86,7 @@ Open English WordNet 2025 (`oewn:2025`), NLTK 3.10.3 and wn 1.1.1.
 - The `clarity-score-compare` command is no longer installed. `python -m clarity_score.cli compare` runs the same deprecated comparison.
 
 ### Fixed
+- The first NLTK data check is done under a lock, so threads that score at the same time on a fresh process check and download the data once.
 - `analyze()` can be called from several threads. WordNet access is serialized by a lock and the shared SQLite connection allows any thread. This sets `wn.config.allow_multithreading` for the whole process.
 - Missing language data now raises one `LookupError` that names the install command (`python -m wn download oewn:2025`, or `python -m nltk.downloader punkt_tab averaged_perceptron_tagger_eng`), and a failed NLTK download is no longer treated as a success. The command line tools print that message on stderr and exit with code 2 instead of a traceback with code 1.
 - NLTK tokenizer and tagger data installed only as zip archives is found, as NLTK itself loads it. Before, the package downloaded and unpacked that data again on first use, and reported it as missing when the download failed.
@@ -110,7 +112,7 @@ Open English WordNet 2025 (`oewn:2025`), NLTK 3.10.3 and wn 1.1.1.
 - `python -m clarity_score.cli compare --model NAME` compares only the named models. Before, each `--model` was added to the two default models. The command exits with code 1 and writes no output file when no comparison ran, as when sentence-transformers is not installed. Before, it exited with code 0.
 - The shipped type hints pass mypy, including on Python 3.10, and the package declares the `Typing :: Typed` classifier. The bundled vague word list is located with a call that Python 3.10 type stubs accept.
 - `clarity_score.__all__` lists `SyntaxReport`, which the package already imported.
-- The sdist ships the shared test fixtures in `tests/fixtures`, so its tests run outside the source repository. A build hook adds them only when the sdist is built from a source checkout, so an sdist and a wheel can also be built from an unpacked sdist.
+- The sdist ships the tests and the shared test fixtures in `tests/fixtures`, so its tests run outside the source repository, and an sdist and a wheel can be built from an unpacked sdist.
 - `LICENSE-APACHE-2.0` holds the canonical text of the Apache License 2.0.
 
 ### Known limitations

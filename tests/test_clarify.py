@@ -405,3 +405,84 @@ class TestErrorHandling:
     def test_invalid_on_error(self, latin1_dir: Path):
         with pytest.raises(ValueError, match="on_error"):
             clarify(latin1_dir, on_error="ignore")
+
+
+# ---------------------------------------------------------------------------
+# Test: scoring options reach analyze() in every input mode
+# ---------------------------------------------------------------------------
+
+
+class TestScoringOptions:
+    """clarify() passes weights, semantic_scorer and extra_vague_words to analyze()."""
+
+    @staticmethod
+    def _modes(temp_dir: Path, single_skill_file: Path, jsonl_batch: Path):
+        return {
+            "file": single_skill_file,
+            "directory": temp_dir / "skills",
+            "batch": jsonl_batch,
+        }
+
+    @staticmethod
+    def _results(result):
+        if isinstance(result, dict):
+            return list(result.values())
+        if isinstance(result, list):
+            return [res for _, res in result]
+        return [result]
+
+    @pytest.mark.parametrize("mode", ["file", "directory", "batch"])
+    def test_options_are_passed_to_analyze(
+        self, mode, temp_dir, single_skill_file, jsonl_batch, monkeypatch
+    ):
+        import importlib
+
+        from clarity_score.scoring import ScoreWeights
+
+        # The package exports the clarify function under the module's name.
+        clarify_module = importlib.import_module("clarity_score.clarify")
+
+        seen: list[dict] = []
+        real_analyze = clarify_module.analyze
+
+        def spy(text, **kwargs):
+            seen.append(kwargs)
+            return real_analyze(text, **kwargs)
+
+        monkeypatch.setattr(clarify_module, "analyze", spy)
+        weights = ScoreWeights(semantic=1.0, vagueness=0.0, syntax=0.0, structure=0.0)
+        path = self._modes(temp_dir, single_skill_file, jsonl_batch)[mode]
+        clarify(path, weights=weights, extra_vague_words=["brand"])
+
+        assert seen
+        for kwargs in seen:
+            assert kwargs["weights"] is weights
+            assert kwargs["extra_vague_words"] == ["brand"]
+            assert kwargs["semantic_scorer"] is None
+
+    def test_weights_are_reported_in_results(self, temp_dir: Path):
+        from clarity_score.scoring import ScoreWeights
+
+        weights = ScoreWeights(semantic=1.0, vagueness=0.0, syntax=0.0, structure=0.0)
+        for _, result in clarify(temp_dir / "skills", weights=weights):
+            assert result.weights is weights
+
+    @pytest.mark.parametrize("mode", ["file", "directory", "batch"])
+    def test_semantic_scorer_is_used(self, mode, temp_dir, single_skill_file, jsonl_batch):
+        class Constant:
+            def score(self, sentence, tokens):
+                return 100.0
+
+        path = self._modes(temp_dir, single_skill_file, jsonl_batch)[mode]
+        for result in self._results(clarify(path, semantic_scorer=Constant())):
+            assert result.semantic_ambiguity == 100.0
+
+    def test_extra_vague_words_lower_the_score(self, single_skill_file: Path):
+        before = clarify(single_skill_file)
+        after = clarify(single_skill_file, extra_vague_words="brand guidelines")
+        assert {hit.phrase for hit in after.vague_hits} - {hit.phrase for hit in before.vague_hits}
+        assert after.clarity_score < before.clarity_score
+
+    def test_defaults_are_unchanged(self, single_skill_file: Path):
+        result = clarify(single_skill_file)
+        assert result.readability_score is not None

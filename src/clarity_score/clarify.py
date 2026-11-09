@@ -40,7 +40,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Literal
 
 if TYPE_CHECKING:
-    from .scorer import CoherenceScorer
+    from collections.abc import Iterable
+
+    from .scorer import CoherenceScorer, SemanticScorer
+    from .scoring import ScoreWeights
 
 from .scoring import AnalysisResult, analyze
 
@@ -179,6 +182,9 @@ def _score_file(
     *,
     include_readability: bool = True,
     coherence_scorer: "CoherenceScorer | None" = None,
+    weights: "ScoreWeights | None" = None,
+    semantic_scorer: "SemanticScorer | None" = None,
+    extra_vague_words: "str | Iterable[str] | None" = None,
 ) -> AnalysisResult:
     """Score a single file's content using ``analyze()``.
 
@@ -187,6 +193,9 @@ def _score_file(
         content: Pre-read content string. If ``None``, reads from disk.
         include_readability: Whether to compute readability metrics (default True).
         coherence_scorer: Optional embedding-based coherence scorer.
+        weights: Custom score weights, passed to ``analyze()``.
+        semantic_scorer: Custom semantic scorer, passed to ``analyze()``.
+        extra_vague_words: Additional vague words, passed to ``analyze()``.
 
     Returns:
         An ``AnalysisResult`` for the file's content.
@@ -197,6 +206,9 @@ def _score_file(
         text,
         include_readability=include_readability,
         coherence_scorer=coherence_scorer,
+        weights=weights,
+        semantic_scorer=semantic_scorer,
+        extra_vague_words=extra_vague_words,
     )
 
 
@@ -210,6 +222,9 @@ def clarify(
     *,
     include_readability: bool = True,
     coherence_scorer: "CoherenceScorer | None" = None,
+    weights: "ScoreWeights | None" = None,
+    semantic_scorer: "SemanticScorer | None" = None,
+    extra_vague_words: "str | Iterable[str] | None" = None,
     pattern: str = "**/*.md",
     fmt: str = "auto",
     on_error: Literal["skip", "raise"] = "skip",
@@ -227,9 +242,16 @@ def clarify(
             * JSONL batch file with ``{"path": "..."}`` entries
         include_readability: Include readability metrics in results (default True).
         coherence_scorer: Optional embedding-based coherence scorer. If provided,
-            each result will include ``context_coherence``. clarify() scores
-            with the default ScoreWeights, whose readability and coherence
-            weights are 0, so neither signal changes ``clarity_score``.
+            each result will include ``context_coherence``. With the default
+            ScoreWeights the readability and coherence weights are 0, so
+            neither signal changes ``clarity_score`` unless *weights* gives
+            them a weight above 0.
+        weights: Custom score weights for every scored file, passed to
+            ``analyze()``. ``None`` uses the default ScoreWeights.
+        semantic_scorer: Custom semantic scorer for every scored file, passed
+            to ``analyze()``. ``None`` uses WordnetPolysemyScorer.
+        extra_vague_words: Additional vague words for every scored file,
+            passed to ``analyze()``. A single string counts as one entry.
         pattern: Glob pattern for directory scanning (default ``**/*.md``).
             Set to ``"*/SKILL.md"`` to only find SKILL.md files.
         fmt: Output format hint — currently unused (auto-detection always applies).
@@ -280,26 +302,31 @@ def clarify(
             stacklevel=2,
         )
 
+    options: dict[str, Any] = {
+        "weights": weights,
+        "semantic_scorer": semantic_scorer,
+        "extra_vague_words": extra_vague_words,
+    }
+
     # Detect input type and dispatch
     if path.is_file():
         # Check if it looks like a JSONL file
         if path.suffix == ".jsonl" or path.suffix == ".json":
             return _score_batch(
-                path, include_readability, coherence_scorer, on_error=on_error,
+                path, include_readability, coherence_scorer, on_error=on_error, **options,
             )
         else:
-            result = _score_file(
+            return _score_file(
                 path, content=None,
                 include_readability=include_readability,
                 coherence_scorer=coherence_scorer,
+                **options,
             )
-            # Wrap in dict for consistency — key is the stem (file name without ext)
-            return result
 
     elif path.is_dir():
         return _score_directory(
             path, pattern, include_readability, coherence_scorer,
-            on_error=on_error,
+            on_error=on_error, **options,
         )
 
     else:
@@ -318,6 +345,9 @@ def _score_directory(
     coherence_scorer: "CoherenceScorer | None",
     *,
     on_error: Literal["skip", "raise"] = "skip",
+    weights: "ScoreWeights | None" = None,
+    semantic_scorer: "SemanticScorer | None" = None,
+    extra_vague_words: "str | Iterable[str] | None" = None,
 ) -> list[tuple[Path, AnalysisResult]]:
     """Score all files matching *pattern* in *dir_path*.
 
@@ -336,6 +366,9 @@ def _score_directory(
                 text,
                 include_readability=include_readability,
                 coherence_scorer=coherence_scorer,
+                weights=weights,
+                semantic_scorer=semantic_scorer,
+                extra_vague_words=extra_vague_words,
             )
             results.append((file_path, result))
         except Exception as exc:
@@ -354,6 +387,9 @@ def _score_batch(
     coherence_scorer: "CoherenceScorer | None",
     *,
     on_error: Literal["skip", "raise"] = "skip",
+    weights: "ScoreWeights | None" = None,
+    semantic_scorer: "SemanticScorer | None" = None,
+    extra_vague_words: "str | Iterable[str] | None" = None,
 ) -> dict[str, AnalysisResult]:
     """Score entries from a JSONL batch file.
 
@@ -407,12 +443,18 @@ def _score_batch(
                     _strip_frontmatter(content_inline),
                     include_readability=include_readability,
                     coherence_scorer=coherence_scorer,
+                    weights=weights,
+                    semantic_scorer=semantic_scorer,
+                    extra_vague_words=extra_vague_words,
                 )
             elif entry_path.is_file():
                 result = _score_file(
-                    entry_path, 
+                    entry_path,
                     include_readability=include_readability,
                     coherence_scorer=coherence_scorer,
+                    weights=weights,
+                    semantic_scorer=semantic_scorer,
+                    extra_vague_words=extra_vague_words,
                 )
             else:
                 # content is required if file path doesn't exist
