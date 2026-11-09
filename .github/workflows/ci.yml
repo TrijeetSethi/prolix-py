@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # The release workflow runs this before it publishes, and publishes the
+  # distributions that the package job built and tested.
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  WORDNET: oewn:2025
+  NLTK_DATA_PACKAGES: punkt_tab averaged_perceptron_tagger_eng
+
+jobs:
+  test:
+    name: test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[dev]" "mypy<2"
+      - name: Fetch WordNet and NLTK data
+        run: |
+          python -m wn download "$WORDNET"
+          python -m nltk.downloader $NLTK_DATA_PACKAGES
+      - run: ruff check .
+      - run: mypy src/clarity_score
+      - run: pytest
+      - run: pytest --doctest-modules src/clarity_score/clarity.py
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - run: python -m pip install build twine
+      - name: Build the sdist and wheel
+        run: python -m build
+      - name: Check the package metadata
+        run: python -m twine check --strict dist/*
+      - name: Install the wheel in a fresh virtual environment
+        run: |
+          python -m venv "$RUNNER_TEMP/w"
+          "$RUNNER_TEMP/w/bin/pip" install dist/*.whl pytest
+      - name: Fetch WordNet and NLTK data
+        run: |
+          "$RUNNER_TEMP/w/bin/python" -m wn download "$WORDNET"
+          "$RUNNER_TEMP/w/bin/python" -m nltk.downloader $NLTK_DATA_PACKAGES
+      - name: Run the installed commands
+        run: |
+          "$RUNNER_TEMP/w/bin/clarity-score" "The chef stirred the soup with the spoon."
+          "$RUNNER_TEMP/w/bin/clarity-score" --version
+          "$RUNNER_TEMP/w/bin/clarity-score" dir tests/fixtures/skills
+          "$RUNNER_TEMP/w/bin/python" -m clarity_score --version
+      - name: Run the sdist test suite against the installed wheel
+        run: |
+          mkdir "$RUNNER_TEMP/sdist"
+          tar -xzf dist/*.tar.gz -C "$RUNNER_TEMP/sdist" --strip-components=1
+          cd "$RUNNER_TEMP/sdist"
+          rm -rf src
+          "$RUNNER_TEMP/w/bin/python" -m pytest -q
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+
+  repo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check the bundled word list matches the shared fixture
+        run: cmp src/clarity_score/data/vague_words.txt tests/fixtures/vague_words.txt
+      - name: Check the plain-prose style of the user-facing docs
+        env:
+          LC_ALL: C.UTF-8
+          # Em and en dashes, arrows, tilde approximations, check and cross marks, and emoji.
+          STYLE: '\x{2014}|\x{2013}|[\x{2190}-\x{21FF}]|~\s?\d|:white_check_mark:|:x:|[\x{2705}\x{2713}-\x{2718}\x{274C}\x{274E}]|[\x{1F300}-\x{1FAFF}]'
+        run: |
+          status=0
+          grep -nP "$STYLE" README.md CONTRIBUTING.md RELEASING.md \
+            src/clarity_score/clarity.py || status=$?
+          if [ "$status" -ne 1 ]; then
+            echo "Rewrite the lines above in plain prose, or fix the error that grep reported." >&2
+            exit 1
+          fi

@@ -1,0 +1,119 @@
+name: Release
+
+# Pushing to beta publishes a pre-release and pushing to release publishes a
+# final release, each only when the version in src/clarity_score/__init__.py
+# is not on PyPI yet. See RELEASING.md.
+on:
+  push:
+    branches: [beta, release]
+
+permissions:
+  contents: read
+
+# One release at a time per branch, and never cancel a release in progress.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.plan.outputs.publish }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
+      version: ${{ steps.plan.outputs.version }}
+      tag: ${{ steps.plan.outputs.tag }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Decide whether this push publishes
+        id: plan
+        env:
+          PUBLISH_ENABLED: ${{ vars.PUBLISH_ENABLED }}
+        run: >
+          python .github/scripts/release_plan.py
+          --registry pypi
+          --branch "${GITHUB_REF_NAME}"
+          --enabled "${PUBLISH_ENABLED}"
+          --notes release-notes.md
+      - if: steps.plan.outputs.publish == 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+
+  ci:
+    needs: plan
+    if: needs.plan.outputs.publish == 'true'
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: [plan, ci]
+    if: needs.plan.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/clarity-score/${{ needs.plan.outputs.version }}/
+    permissions:
+      # Trusted publishing: PyPI exchanges this OIDC token for a short-lived upload token.
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - name: Check the built version matches the plan
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          ls dist
+          test -f "dist/clarity_score-${VERSION}-py3-none-any.whl"
+          test -f "dist/clarity_score-${VERSION}.tar.gz"
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
+        with:
+          # Sigstore attestations record the repository in a public log, so
+          # they are made only once the repository is public.
+          attestations: ${{ !github.event.repository.private }}
+
+  github-release:
+    needs: [plan, publish]
+    if: needs.plan.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      # Creates the version tag and the GitHub release.
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist/
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-notes
+      - name: Tag the commit and create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          VERSION: ${{ needs.plan.outputs.version }}
+          PRERELEASE: ${{ needs.plan.outputs.prerelease }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists."
+            exit 0
+          fi
+          flags=()
+          if [ "$PRERELEASE" = "true" ]; then
+            flags+=(--prerelease --latest=false)
+          fi
+          gh release create "$TAG" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "clarity-score $VERSION" \
+            --notes-file release-notes.md \
+            "${flags[@]}"
