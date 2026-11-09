@@ -1,6 +1,6 @@
 """Check the shared fixtures/sentences.jsonl corpus.
 
-rust/tests/parity.rs reads the same corpus and makes the same checks. The two
+the Rust crate's tests/parity.rs reads the same corpus and makes the same checks. The two
 packages use different taggers and different copies of WordNet, so neither
 suite compares scores across languages. Each suite checks that its own package
 orders the two rows of each pair_group as expected and meets the threshold
@@ -16,7 +16,7 @@ from clarity_score import Clarity, ClarityScores
 from clarity_score.readability import text_to_clarity_score
 from clarity_score.scoring import analyze
 
-# Every expect key that this suite and rust/tests/parity.rs check.
+# Every expect key that this suite and the Rust crate's tests/parity.rs check.
 _EXPECT_KEYS = {
     "pair_group",
     "pair_role",
@@ -108,7 +108,7 @@ def test_every_expect_key_is_checked(fixture_sentences):
 
 
 def test_pair_groups_order_as_expected_through_clarity(fixture_sentences):
-    """The same pairs scored through Clarity, as in rust/tests/parity.rs.
+    """The same pairs scored through Clarity, as in the Rust crate's tests/parity.rs.
 
     The headline orders every pair, and each group's own field orders it too.
     """

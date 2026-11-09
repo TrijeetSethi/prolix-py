@@ -17,10 +17,7 @@ from clarity_score.clarify import _read_content
 from clarity_score.cli import entry_dir, entry_single
 
 
-# An sdist ships the shared fixtures in tests/fixtures. A checkout keeps them at the repo root.
-REPO_ROOT = Path(__file__).resolve().parents[2]
-_LOCAL_FIXTURES = Path(__file__).resolve().parent / "fixtures"
-FIXTURE_DIR = (_LOCAL_FIXTURES if _LOCAL_FIXTURES.is_dir() else REPO_ROOT / "fixtures") / "skills"
+FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "skills"
 
 # The keys of ClarityScores.to_dict(), which clarity-score --json prints in this order.
 KEYS = ["clarity", "lexical", "specificity", "syntax", "readability", "words"]

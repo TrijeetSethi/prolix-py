@@ -48,10 +48,11 @@ semantic-coherence = [
 all = ["clarity-score[readability,semantic-coherence]"]
 
 [project.urls]
-Homepage = "https://github.com/treejay/vague"
-Repository = "https://github.com/treejay/vague"
-Documentation = "https://github.com/treejay/vague/blob/main/python/README.md"
-Changelog = "https://github.com/treejay/vague/blob/main/python/CHANGELOG.md"
+Homepage = "https://github.com/TrijeetSethi/vague-py"
+Repository = "https://github.com/TrijeetSethi/vague-py"
+Documentation = "https://github.com/TrijeetSethi/vague-py/blob/main/README.md"
+Changelog = "https://github.com/TrijeetSethi/vague-py/blob/main/CHANGELOG.md"
+Issues = "https://github.com/TrijeetSethi/vague-py/issues"
 
 [project.scripts]
 clarity-score = "clarity_score.cli:main"
@@ -60,9 +61,18 @@ clarity-score-dir = "clarity_score.cli:entry_dir"
 [tool.hatch.version]
 path = "src/clarity_score/__init__.py"
 
-# hatch_build.py copies ../fixtures into tests/fixtures when it builds the sdist
-# from a source checkout.
-[tool.hatch.build.targets.sdist.hooks.custom]
+# The sdist ships the tests and their fixtures so that it can be tested on its own.
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/LICENSE-MIT",
+    "/LICENSE-APACHE-2.0",
+    "/pyproject.toml",
+]
+exclude = ["__pycache__", "*.pyc"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/clarity_score"]

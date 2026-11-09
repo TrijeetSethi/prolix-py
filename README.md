@@ -422,11 +422,11 @@ any minor release before 1.0.
 
 ## Development
 
-From the root of a source checkout, change to the python directory and run the
-tests there.
+Run the tests from the root of a source checkout.
 
 ```bash
-cd python
+git clone https://github.com/TrijeetSethi/vague-py
+cd vague-py
 pip install -e ".[dev]"
 python -m nltk.downloader punkt_tab averaged_perceptron_tagger_eng
 python -m wn download oewn:2025
@@ -435,6 +435,8 @@ ruff check .
 ```
 
 The coherence tests are skipped unless sentence-transformers is installed.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full set of checks and
+[RELEASING.md](RELEASING.md) for how a release reaches PyPI.
 
 ## Data and attribution
 
@@ -451,7 +453,7 @@ from NLTK Data, which are distributed under their own licenses.
 
 clarity-score is licensed under either the MIT license or the Apache License,
 Version 2.0, at your option. The license texts are in the `LICENSE-MIT` and
-`LICENSE-APACHE-2.0` files. The `rust/NOTICE` file in the source repository
+`LICENSE-APACHE-2.0` files. The `NOTICE` file of the clarity-score Rust crate
 gives the full WordNet attribution and reproduces the Princeton WordNet 3.0
 license.
 
