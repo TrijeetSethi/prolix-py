@@ -477,9 +477,12 @@ class TestScoringOptions:
         for result in self._results(clarify(path, semantic_scorer=Constant())):
             assert result.semantic_ambiguity == 100.0
 
-    def test_extra_vague_words_lower_the_score(self, single_skill_file: Path):
-        before = clarify(single_skill_file)
-        after = clarify(single_skill_file, extra_vague_words="brand guidelines")
+    def test_extra_vague_words_lower_the_score(self, tmp_path: Path):
+        # Its own file, because the directory glob order differs between systems.
+        skill = tmp_path / "brand.md"
+        skill.write_text("# Brand Skill\n\nUse our brand guidelines.", encoding="utf-8")
+        before = clarify(skill)
+        after = clarify(skill, extra_vague_words="brand guidelines")
         assert {hit.phrase for hit in after.vague_hits} - {hit.phrase for hit in before.vague_hits}
         assert after.clarity_score < before.clarity_score
 
