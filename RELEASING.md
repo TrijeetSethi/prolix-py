@@ -121,3 +121,24 @@ These steps are needed once, before the first release.
 4. **Make the repository public** before the first final release, so that the
    project links on PyPI work and Sigstore attestations are published with the
    distributions. The workflow makes attestations only for a public repository.
+
+## Protect the branches
+
+Once the repository is public, or on GitHub Pro, add a ruleset so that `main`,
+`beta` and `release` can be neither deleted nor force-pushed. A force-push to
+`release` could otherwise move it to a commit that was never on `main`.
+
+```bash
+gh api -X POST repos/TrijeetSethi/vague-py/rulesets --input - <<'JSON'
+{
+  "name": "protect main, beta and release",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {"ref_name": {"include": ["refs/heads/main", "refs/heads/beta", "refs/heads/release"], "exclude": []}},
+  "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}]
+}
+JSON
+```
+
+Private repositories on the free plan cannot use rulesets, so until then avoid
+`git push --force` to these branches.
