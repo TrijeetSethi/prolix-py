@@ -369,22 +369,6 @@ never downloaded and must be installed first.
 | `SyntaxReport` | The structurally ambiguous patterns found |
 | `VagueHit` | One vague word or phrase found in the text |
 
-## Python and Rust differences
-
-The prolix crate on crates.io offers the same Clarity interface in Rust.
-Both packages return the same six fields with the same names, types, ranges and
-direction, and both compute the headline with the same weights. Both give the
-same all zero result for text with nothing to score and match vague words by
-the same rules against the same built in list.
-
-The two packages do not give equal numbers for the same text. They use
-different part of speech taggers. The Rust crate embeds a table derived from
-Open English WordNet and needs no download, while the Python package reads the
-full lexicon through wn at run time. Scores from one package are not comparable
-with scores from the other, so compare scores only within one package and
-version. The lower level `analyze` functions differ more, because their default
-weights differ and only the Python package scores document structure.
-
 ## Stability policy
 
 From release 0.3.0 the following parts of the package are stable.
@@ -435,8 +419,11 @@ ruff check .
 ```
 
 The coherence tests are skipped unless sentence-transformers is installed.
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the full set of checks and
-[RELEASING.md](RELEASING.md) for how a release reaches PyPI.
+See
+[CONTRIBUTING.md](https://github.com/TrijeetSethi/prolix-py/blob/main/CONTRIBUTING.md)
+for the full set of checks and
+[RELEASING.md](https://github.com/TrijeetSethi/prolix-py/blob/main/RELEASING.md)
+for how a release reaches PyPI.
 
 ## Data and attribution
 
@@ -451,13 +438,5 @@ from NLTK Data, which are distributed under their own licenses.
 
 ## License
 
-prolix is licensed under either the MIT license or the Apache License,
-Version 2.0, at your option. The license texts are in the `LICENSE-MIT` and
-`LICENSE-APACHE-2.0` files. The `NOTICE` file of the prolix Rust crate
-gives the full WordNet attribution and reproduces the Princeton WordNet 3.0
-license.
-
-Unless you explicitly state otherwise, any contribution intentionally
-submitted for inclusion in the work by you, as defined in the Apache-2.0
-license, shall be dual licensed as above, without any additional terms or
-conditions.
+prolix is licensed under the MIT license. The license text is in
+[LICENSE.md](https://github.com/TrijeetSethi/prolix-py/blob/main/LICENSE.md).

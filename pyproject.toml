@@ -7,10 +7,11 @@ name = "prolix"
 dynamic = ["version"]
 description = "Heuristic clarity and vagueness scoring for English prose"
 readme = "README.md"
-license = "MIT OR Apache-2.0"
+license = "MIT"
+license-files = ["LICENSE.md"]
 requires-python = ">=3.10"
-authors = [{ name = "Prolix", email = "trijeet@protonmail.com" }]
-keywords = ["nlp", "readability", "prose", "vagueness", "prolix", "clarity", "linguistics"]
+authors = [{ name = "TrijeetSethi", email = "trijeet@protonmail.com" }]
+keywords = ["nlp", "readability", "prose", "vagueness", "prolix", "clarity", "wordnet", "linguistics"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -68,18 +69,13 @@ include = [
     "/tests",
     "/README.md",
     "/CHANGELOG.md",
-    "/LICENSE-MIT",
-    "/LICENSE-APACHE-2.0",
+    "/LICENSE.md",
     "/pyproject.toml",
 ]
 exclude = ["__pycache__", "*.pyc"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/prolix"]
-include = [
-    "LICENSE-MIT",
-    "LICENSE-APACHE-2.0",
-]
 
 [tool.ruff]
 line-length = 100

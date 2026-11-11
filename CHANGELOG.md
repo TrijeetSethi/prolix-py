@@ -82,7 +82,7 @@ Open English WordNet 2025 (`oewn:2025`), NLTK 3.10.3 and wn 1.1.1.
 - `FormulaWeights` no longer has the unused `_inverted_signals` field, so the constructor no longer accepts it. `apply_formula()` inverts readability, coherence and structure automatically, as before.
 - `MiniLMCoherenceScorer` loads all-MiniLM-L6-v2 from a pinned Hugging Face Hub commit, so coherence scores do not change when the upstream model does. A new `revision` argument selects another commit, branch or tag. Other models still load their latest revision unless `revision` is given. The docstrings and the `semantic-coherence` extra state the model size as about 90 MB instead of 24 MB.
 - The package requires nltk 3.9.1 or newer. With nltk 3.9.0, `import prolix` raises `LookupError` unless the NLTK wordnet corpus is installed.
-- Building the package requires hatchling 1.27 or newer, the first version that writes the `License-Expression` and `License-File` metadata PyPI accepts. The two license classifiers are removed because the `MIT OR Apache-2.0` license expression replaces them.
+- Building the package requires hatchling 1.27 or newer, the first version that writes the `License-Expression` and `License-File` metadata PyPI accepts. The two license classifiers are removed because the `MIT` license expression replaces them.
 - The `all` extra installs only runtime features, so it no longer installs pytest and ruff. The `readability` extra installs nothing, because readability metrics are always available, and is kept so that installs naming it keep working.
 - The `dev` extra pins ruff 0.15.15, the version CI runs, so `ruff check .` gives the same result locally as in CI.
 
@@ -118,7 +118,7 @@ Open English WordNet 2025 (`oewn:2025`), NLTK 3.10.3 and wn 1.1.1.
 - The shipped type hints pass mypy, including on Python 3.10, and the package declares the `Typing :: Typed` classifier. The bundled vague word list is located with a call that Python 3.10 type stubs accept.
 - `prolix.__all__` lists `SyntaxReport`, which the package already imported.
 - The sdist ships the tests and the shared test fixtures in `tests/fixtures`, so its tests run outside the source repository, and an sdist and a wheel can be built from an unpacked sdist.
-- `LICENSE-APACHE-2.0` holds the canonical text of the Apache License 2.0.
+- The package is licensed under the MIT license, whose text is in `LICENSE.md`. The 0.2.0 source was licensed under MIT or Apache-2.0.
 
 ### Known limitations
 - The clarity score is an uncalibrated heuristic. It has not been validated against human judgments of clarity or against task success, so use it to compare two versions of the same text.

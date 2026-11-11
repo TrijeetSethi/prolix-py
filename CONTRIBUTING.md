@@ -1,7 +1,7 @@
 # Contributing
 
 This repository holds the `prolix` Python package, published on PyPI and
-imported as `clarity_score`. The Rust crate of the same name lives in its own
+imported as `prolix`. The Rust crate of the same name lives in its own
 repository, [prolix-rs](https://github.com/TrijeetSethi/prolix-rs), and follows
 the same Clarity contract.
 
@@ -64,11 +64,11 @@ Every public class, method and function has a docstring, which ruff checks.
 ## Branches and releases
 
 Work lands on `main` through pull requests. The `beta` and `release` branches
-publish to PyPI, as described in [RELEASING.md](RELEASING.md).
+publish to PyPI, as described in
+[RELEASING.md](https://github.com/TrijeetSethi/prolix-py/blob/main/RELEASING.md).
 
 ## License
 
-Unless you explicitly state otherwise, any contribution intentionally
-submitted for inclusion in the work by you, as defined in the Apache-2.0
-license, shall be dual licensed under the MIT license and the Apache License,
-Version 2.0, without any additional terms or conditions.
+Unless you explicitly state otherwise, any contribution you intentionally
+submit for inclusion in prolix is licensed under the MIT license, without any
+additional terms or conditions.
