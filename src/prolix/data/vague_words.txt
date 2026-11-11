@@ -1,8 +1,8 @@
 # Curated list of semantically-empty / placeholder words and phrases.
 # One entry per line, lowercase. Multi-word entries are matched as
 # contiguous token sequences. Lines starting with # are comments.
-# Loaded by both the Python package (clarity_score.vague_lexicon) and the
-# Rust crate (clarity_score::vague_lexicon); extend via this single file
+# Loaded by both the Python package (prolix.vague_lexicon) and the
+# Rust crate (prolix::vague_lexicon); extend via this single file
 # rather than editing either package directly.
 
 # generic placeholder nouns/pronouns

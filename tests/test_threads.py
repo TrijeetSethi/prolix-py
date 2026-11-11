@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 from itertools import product
 from pathlib import Path
 
-from clarity_score import analyze, lexical
+from prolix import analyze, lexical
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 
@@ -49,7 +49,7 @@ def test_main_thread_works_after_first_use_in_worker_thread():
         import sys
         sys.path.insert(0, {str(SRC)!r})
         from concurrent.futures import ThreadPoolExecutor
-        from clarity_score import analyze
+        from prolix import analyze
 
         with ThreadPoolExecutor(max_workers=1) as pool:
             pool.submit(analyze, "The chef stirred the soup.").result()

@@ -3,13 +3,13 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "clarity-score"
+name = "prolix"
 dynamic = ["version"]
 description = "Heuristic clarity and vagueness scoring for English prose"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 requires-python = ">=3.10"
-authors = [{ name = "the clarity-score authors", email = "developers@vague.io" }]
+authors = [{ name = "the prolix authors", email = "developers@vague.io" }]
 keywords = ["nlp", "readability", "prose", "vagueness", "wordnet", "clarity", "linguistics"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -33,8 +33,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
-    # The version CI runs. Newer ruff releases enable more rules by default.
-    "ruff==0.15.15",
+    # The version CI runs. The rule set is fixed under [tool.ruff.lint].
+    "ruff==0.17.4",
 ]
 # Readability metrics are always available. This extra installs nothing and is
 # kept as a no-op so that installs naming it keep working.
@@ -45,21 +45,21 @@ semantic-coherence = [
     "sentence-transformers>=3.0",
 ]
 # Convenience extra that enables every runtime feature. Development tools stay in dev.
-all = ["clarity-score[readability,semantic-coherence]"]
+all = ["prolix[readability,semantic-coherence]"]
 
 [project.urls]
-Homepage = "https://github.com/TrijeetSethi/vague-py"
-Repository = "https://github.com/TrijeetSethi/vague-py"
-Documentation = "https://github.com/TrijeetSethi/vague-py/blob/main/README.md"
-Changelog = "https://github.com/TrijeetSethi/vague-py/blob/main/CHANGELOG.md"
-Issues = "https://github.com/TrijeetSethi/vague-py/issues"
+Homepage = "https://github.com/TrijeetSethi/prolix-py"
+Repository = "https://github.com/TrijeetSethi/prolix-py"
+Documentation = "https://github.com/TrijeetSethi/prolix-py/blob/main/README.md"
+Changelog = "https://github.com/TrijeetSethi/prolix-py/blob/main/CHANGELOG.md"
+Issues = "https://github.com/TrijeetSethi/prolix-py/issues"
 
 [project.scripts]
-clarity-score = "clarity_score.cli:main"
-clarity-score-dir = "clarity_score.cli:entry_dir"
+prolix = "prolix.cli:main"
+prolix-dir = "prolix.cli:entry_dir"
 
 [tool.hatch.version]
-path = "src/clarity_score/__init__.py"
+path = "src/prolix/__init__.py"
 
 # The sdist ships the tests and their fixtures so that it can be tested on its own.
 [tool.hatch.build.targets.sdist]
@@ -75,7 +75,7 @@ include = [
 exclude = ["__pycache__", "*.pyc"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/clarity_score"]
+packages = ["src/prolix"]
 include = [
     "LICENSE-MIT",
     "LICENSE-APACHE-2.0",
@@ -85,9 +85,11 @@ include = [
 line-length = 100
 target-version = "py310"
 
-# Every public class, method and function has a docstring.
+# The rule set is listed in full, so that a newer ruff does not turn on more
+# rules by itself. E4, E7, E9 and F are the ruff defaults, and D101 to D103
+# require a docstring on every public class, method and function.
 [tool.ruff.lint]
-extend-select = ["D101", "D102", "D103"]
+select = ["E4", "E7", "E9", "F", "D101", "D102", "D103"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D"]
@@ -98,5 +100,5 @@ ignore_missing_imports = true
 
 # model_compare is a research module that is not type-checked.
 [[tool.mypy.overrides]]
-module = ["clarity_score.model_compare"]
+module = ["prolix.model_compare"]
 ignore_errors = true

@@ -1,4 +1,4 @@
-"""Run the clarity-score command with ``python -m clarity_score``."""
+"""Run the prolix command with ``python -m prolix``."""
 
 from .cli import main
 

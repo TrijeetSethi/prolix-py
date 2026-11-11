@@ -10,7 +10,7 @@ This is used to determine which model best differentiates clarity in skill
 documentation while maintaining computational efficiency.
 
 Model comparison is deprecated. It is an experimental research tool and will be
-removed in clarity-score 0.4.0.
+removed in prolix 0.4.0.
 
 NOT derived from or vendored from any other project. All code reimplemented
 from scratch.
@@ -35,7 +35,7 @@ def _warn_deprecated(name: str) -> None:
     """
     warnings.warn(
         f"{name} is deprecated. Model comparison is an experimental research tool "
-        "and will be removed in clarity-score 0.4.0.",
+        "and will be removed in prolix 0.4.0.",
         DeprecationWarning,
         stacklevel=3,
     )
@@ -213,7 +213,7 @@ def compare_models_benchmark(
     comparison metrics including correlation, timing, and score distribution stats.
 
     Deprecated: this experimental research tool emits a ``DeprecationWarning``
-    and will be removed in clarity-score 0.4.0.
+    and will be removed in prolix 0.4.0.
 
     Args:
         model_names: List of HuggingFace model names to compare

@@ -12,14 +12,14 @@ import tempfile
 import warnings
 from dataclasses import fields
 
-from clarity_score.primitives import (
+from prolix.primitives import (
     ClarityPrimitives, FormulaWeights,
     extract_primitives, apply_formula, apply_all_formulas,
     save_primitives, load_primitives,
     _prism_weights, DEFAULT_WEIGHTS,
     NO_STRUCTURE_WEIGHTS,
 )
-from clarity_score.scoring import ScoreWeights, analyze
+from prolix.scoring import ScoreWeights, analyze
 
 
 class TestExtractPrimitives:

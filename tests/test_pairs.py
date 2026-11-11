@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from clarity_score import clarify
+from prolix import clarify
 
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "skills"
 

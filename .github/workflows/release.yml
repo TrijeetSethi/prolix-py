@@ -1,7 +1,7 @@
 name: Release
 
 # Pushing to beta publishes a pre-release and pushing to release publishes a
-# final release, each only when the version in src/clarity_score/__init__.py
+# final release, each only when the version in src/prolix/__init__.py
 # is not on PyPI yet. See RELEASING.md.
 on:
   push:
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/clarity-score/${{ needs.plan.outputs.version }}/
+      url: https://pypi.org/project/prolix/${{ needs.plan.outputs.version }}/
     permissions:
       # Trusted publishing: PyPI exchanges this OIDC token for a short-lived upload token.
       id-token: write
@@ -72,8 +72,8 @@ jobs:
           VERSION: ${{ needs.plan.outputs.version }}
         run: |
           ls dist
-          test -f "dist/clarity_score-${VERSION}-py3-none-any.whl"
-          test -f "dist/clarity_score-${VERSION}.tar.gz"
+          test -f "dist/prolix-${VERSION}-py3-none-any.whl"
+          test -f "dist/prolix-${VERSION}.tar.gz"
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
@@ -114,6 +114,6 @@ jobs:
           gh release create "$TAG" dist/* \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "clarity-score $VERSION" \
+            --title "prolix $VERSION" \
             --notes-file release-notes.md \
             "${flags[@]}"

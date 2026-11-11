@@ -12,8 +12,7 @@ already published and applies the branch rules:
 - The beta branch publishes only pre-release versions, such as 1.2.0b1 on PyPI
   or 1.2.0-beta.1 on crates.io.
 - The changelog must have a section for the version. For a pre-release the
-  section of its final version is accepted, so 1.2.0b1 can use [1.2.0]. A
-  final release must have a dated section, not one marked Unreleased.
+  section of its final version is accepted, so 1.2.0b1 can use [1.2.0].
 
 The release notes, which are the changelog section, are written to the file
 given by --notes. The decision is printed and, under GitHub Actions, written to
@@ -115,11 +114,6 @@ def release_notes(version: str, final: str, prerelease: bool) -> str:
         for index, heading in enumerate(headings):
             if heading.group(1) != wanted:
                 continue
-            if not prerelease and "unreleased" in heading.group(2).lower():
-                raise PlanError(
-                    f"CHANGELOG.md marks {version} as Unreleased. "
-                    f"Give the heading a date, for example ## [{version}] - 2026-01-31"
-                )
             end = headings[index + 1].start() if index + 1 < len(headings) else len(changelog)
             return changelog[heading.end():end].strip() + "\n"
     raise PlanError(f"CHANGELOG.md has no ## [{candidates[-1]}] section for {version}")

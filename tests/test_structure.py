@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from clarity_score.structure import (
+from prolix.structure import (
     analyze_structure,
     StructureReport,
     _count_headings,
@@ -203,9 +203,9 @@ Requires OAuth credentials.
 
 ```bash
 # install the package
-pip install clarity-score
+pip install prolix
 # check the version
-clarity-score --version
+prolix --version
 ```
 
 ## Usage
@@ -246,7 +246,7 @@ class TestStructureIntegration:
     """Test structural clarity integrates into the full scoring pipeline."""
 
     def test_structure_in_analyze_result(self):
-        from clarity_score import analyze
+        from prolix import analyze
 
         result = analyze(
             "# My Skill\n\n## How to Use It\n1. Install the API.\n2. Run it.",
@@ -258,7 +258,7 @@ class TestStructureIntegration:
         assert result.structural_clarity >= 10
 
     def test_json_includes_structure(self):
-        from clarity_score import analyze
+        from prolix import analyze
 
         result = analyze("# Title\n\n## Section\n1. Do something.")
         data = result.to_json()

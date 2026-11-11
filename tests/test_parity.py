@@ -12,9 +12,9 @@ from __future__ import annotations
 import dataclasses
 import math
 
-from clarity_score import Clarity, ClarityScores
-from clarity_score.readability import text_to_clarity_score
-from clarity_score.scoring import analyze
+from prolix import Clarity, ClarityScores
+from prolix.readability import text_to_clarity_score
+from prolix.scoring import analyze
 
 # Every expect key that this suite and the Rust crate's tests/parity.rs check.
 _EXPECT_KEYS = {

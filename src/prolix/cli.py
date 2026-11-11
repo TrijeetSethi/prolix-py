@@ -1,20 +1,20 @@
-"""Command-line interface for clarity_score.
+"""Command-line interface for prolix.
 
 Usage:
     # Score a single sentence, file or standard input
-    clarity-score "The cat sat on the mat."
-    clarity-score my-skill.md --json
-    clarity-score - < my-skill.md
+    prolix "The cat sat on the mat."
+    prolix my-skill.md --json
+    prolix - < my-skill.md
 
     # Score every matching file in a directory
-    clarity-score dir skills/
-    clarity-score dir /path/to/skills/ --output results.csv
+    prolix dir skills/
+    prolix dir /path/to/skills/ --output results.csv
 
     # Print the version
-    clarity-score --version
+    prolix --version
 
-python -m clarity_score runs the same command. clarity-score-dir is an alias
-of clarity-score dir. To score the word dir itself, run clarity-score -- dir.
+python -m prolix runs the same command. prolix-dir is an alias
+of prolix dir. To score the word dir itself, run prolix -- dir.
 """
 
 from __future__ import annotations
@@ -42,7 +42,7 @@ __all__ = ["main", "entry_single", "entry_dir", "entry_compare"]
 # which reports a failed run or a score below --fail-under.
 _EXIT_MISSING_DATA = 2
 
-# Exit code for missing or unreadable input to clarity-score.
+# Exit code for missing or unreadable input to prolix.
 _EXIT_BAD_INPUT = 2
 
 # A single word with one of these suffixes is taken to be a file path.
@@ -56,11 +56,11 @@ _COHERENCE_HELP = (
 
 _SINGLE_EPILOG = """\
 examples:
-  clarity-score "Click the Save button to store the file."
-  clarity-score SKILL.md --json --fail-under 40
-  clarity-score - < SKILL.md
-  clarity-score dir skills/ --output results.csv
-  clarity-score --json -- dir
+  prolix "Click the Save button to store the file."
+  prolix SKILL.md --json --fail-under 40
+  prolix - < SKILL.md
+  prolix dir skills/ --output results.csv
+  prolix --json -- dir
 
 INPUT is a file, - for standard input, or the text to score. YAML front matter
 is removed from a file or standard input before it is scored. A first argument
@@ -159,13 +159,13 @@ def _exit_quietly_on_broken_pipe(entry: Callable[_P, int]) -> Callable[_P, int]:
 
 @_exit_quietly_on_broken_pipe
 def main(argv: list[str] | None = None) -> int:
-    """Run the ``clarity-score`` command and dispatch to its subcommands.
+    """Run the ``prolix`` command and dispatch to its subcommands.
 
     A first argument of ``dir`` runs ``entry_dir()`` and ``compare`` runs
     ``entry_compare()``. Any other arguments score one sentence or file with
     ``entry_single()``. Arguments after ``--`` are never taken as a subcommand.
     The ``compare`` subcommand calls ``entry_compare()``, which is deprecated and
-    emits a ``DeprecationWarning``. It will be removed in clarity-score 0.4.0.
+    emits a ``DeprecationWarning``. It will be removed in prolix 0.4.0.
     """
     if argv is None:
         argv = sys.argv[1:]
@@ -189,7 +189,7 @@ def main(argv: list[str] | None = None) -> int:
 def entry_single(argv: list[str] | None = None) -> int:
     """Score one sentence, file or standard input with ``Clarity``, the default command."""
     parser = argparse.ArgumentParser(
-        prog="clarity-score",
+        prog="prolix",
         description="Score the clarity of a sentence or a Markdown file.",
         epilog=_SINGLE_EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -210,13 +210,13 @@ def entry_single(argv: list[str] | None = None) -> int:
 
 @_exit_quietly_on_broken_pipe
 def entry_dir(argv: list[str] | None = None) -> int:
-    """Entry point for ``clarity-score dir`` and its ``clarity-score-dir`` alias."""
+    """Entry point for ``prolix dir`` and its ``prolix-dir`` alias."""
     # Directory and file names are printed with backslash escapes when stdout
     # cannot encode them, as with redirected output on Windows.
     if isinstance(sys.stdout, io.TextIOWrapper):
         sys.stdout.reconfigure(errors="backslashreplace")
     parser = argparse.ArgumentParser(
-        prog="clarity-score dir",
+        prog="prolix dir",
         description="Score all files in a directory.",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -234,20 +234,20 @@ def entry_compare(argv: list[str] | None = None) -> int:
     """Run the deprecated model comparison command.
 
     Model comparison is an experimental research tool. This function emits a
-    ``DeprecationWarning`` and will be removed in clarity-score 0.4.0. It also
+    ``DeprecationWarning`` and will be removed in prolix 0.4.0. It also
     prints a warning line on stderr, because Python hides that warning from
-    the clarity-score command by default.
+    the prolix command by default.
     """
     from .model_compare import _warn_deprecated
 
-    _warn_deprecated("The compare subcommand of clarity_score.cli")
+    _warn_deprecated("The compare subcommand of prolix.cli")
     print("warning: the compare subcommand is deprecated and will be removed in "
-          "clarity-score 0.4.0", file=sys.stderr)
+          "prolix 0.4.0", file=sys.stderr)
     parser = argparse.ArgumentParser(
-        prog="python -m clarity_score.cli compare",
+        prog="python -m prolix.cli compare",
         description=(
             "Compare coherence models on a set of documents. Deprecated: this "
-            "experimental research tool will be removed in clarity-score 0.4.0."
+            "experimental research tool will be removed in prolix 0.4.0."
         ),
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
@@ -320,10 +320,10 @@ def _cmd_single(args: argparse.Namespace) -> int:
             # text is longer than the file name limit, so treat it as text.
             is_file = is_dir = False
         if is_dir:
-            print(f"error: {args.input} is a directory, use clarity-score dir", file=sys.stderr)
+            print(f"error: {args.input} is a directory, use prolix dir", file=sys.stderr)
             return _EXIT_BAD_INPUT
         if is_file:
-            # Read like clarify() and clarity-score dir: UTF-8, front matter stripped.
+            # Read like clarify() and prolix dir: UTF-8, front matter stripped.
             try:
                 text = _read_content(path)
             except (OSError, UnicodeDecodeError) as exc:
@@ -353,7 +353,7 @@ def _cmd_single(args: argparse.Namespace) -> int:
 
 
 def _cmd_dir(args: argparse.Namespace) -> int:
-    """Handle the ``clarity-score dir`` subcommand."""
+    """Handle the ``prolix dir`` subcommand."""
     from .clarify import _discover_directory, _score_file
 
     skills_path = Path(args.target)

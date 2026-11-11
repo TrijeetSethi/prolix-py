@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from clarity_score.clarify import (
+from prolix.clarify import (
     _strip_frontmatter,
     clarify,
 )
@@ -333,7 +333,7 @@ class TestCoherenceIntegration:
 
     @pytest.mark.skip(reason="Requires sentence-transformers installed")
     def test_coherence_with_scorer(self, single_skill_file: Path):
-        from clarity_score.semantic_coherence import MiniLMCoherenceScorer
+        from prolix.semantic_coherence import MiniLMCoherenceScorer
 
         scorer = MiniLMCoherenceScorer()
         result = clarify(single_skill_file, coherence_scorer=scorer)
@@ -376,7 +376,7 @@ class TestErrorHandling:
         return docs
 
     def test_directory_skips_and_logs_failed_file(self, latin1_dir: Path, caplog):
-        with caplog.at_level(logging.WARNING, logger="clarity_score.clarify"):
+        with caplog.at_level(logging.WARNING, logger="prolix.clarify"):
             results = clarify(latin1_dir, include_readability=False)
         assert [p.name for p, _ in results] == ["good.md"]
         assert len(caplog.records) == 1
@@ -390,7 +390,7 @@ class TestErrorHandling:
     def test_batch_skips_and_logs_failed_entry(self, latin1_dir: Path, caplog):
         batch = latin1_dir / "batch.jsonl"
         batch.write_text('{"path": "good.md"}\n{"path": "bad.md"}\n', encoding="utf-8")
-        with caplog.at_level(logging.WARNING, logger="clarity_score.clarify"):
+        with caplog.at_level(logging.WARNING, logger="prolix.clarify"):
             results = clarify(batch, include_readability=False)
         assert list(results) == ["good"]
         assert len(caplog.records) == 1
@@ -437,10 +437,10 @@ class TestScoringOptions:
     ):
         import importlib
 
-        from clarity_score.scoring import ScoreWeights
+        from prolix.scoring import ScoreWeights
 
         # The package exports the clarify function under the module's name.
-        clarify_module = importlib.import_module("clarity_score.clarify")
+        clarify_module = importlib.import_module("prolix.clarify")
 
         seen: list[dict] = []
         real_analyze = clarify_module.analyze
@@ -461,7 +461,7 @@ class TestScoringOptions:
             assert kwargs["semantic_scorer"] is None
 
     def test_weights_are_reported_in_results(self, temp_dir: Path):
-        from clarity_score.scoring import ScoreWeights
+        from prolix.scoring import ScoreWeights
 
         weights = ScoreWeights(semantic=1.0, vagueness=0.0, syntax=0.0, structure=0.0)
         for _, result in clarify(temp_dir / "skills", weights=weights):

@@ -5,7 +5,7 @@ Clarity object, call its score method on a sentence or a document and read
 the result. Every score runs from 0 to 100 and a higher value always means
 clearer text.
 
-    from clarity_score import Clarity
+    from prolix import Clarity
 
     clarity = Clarity()
     scores = clarity.score("Replace the leaking kitchen faucet before Friday")

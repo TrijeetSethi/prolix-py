@@ -91,7 +91,7 @@ class ClarityPrimitives:
 class FormulaWeights:
     """Defines a specific weighting combination for computing clarity.
 
-    Unlike :class:`~clarity_score.scoring.ScoreWeights` (which controls the
+    Unlike :class:`~prolix.scoring.ScoreWeights` (which controls the
     internal ``analyze()`` pipeline), this class is lightweight: it just maps
     signal names to weights.  ``apply_formula()`` combines them with the same
     rule as ``analyze()``, so equal weights give equal scores.

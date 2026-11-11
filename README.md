@@ -1,8 +1,8 @@
-# clarity-score
+# prolix
 
 Heuristic clarity and vagueness scoring for English prose.
 
-clarity-score gives a sentence or a whole document a set of scores from 0 to
+prolix gives a sentence or a whole document a set of scores from 0 to
 100, where a higher value always means clearer text. It looks at how many
 dictionary senses the words have, how precise the vocabulary is, how many
 vague words appear and how many sentences contain structurally ambiguous
@@ -13,7 +13,7 @@ patterns. It is most useful for comparing two versions of the same text.
 Install the package from PyPI.
 
 ```bash
-pip install clarity-score
+pip install prolix
 ```
 
 The package needs Python 3.10 or newer.
@@ -35,13 +35,13 @@ in your home directory unless the NLTK_DATA environment variable names another
 directory.
 
 Clarity never downloads anything. When the data is missing, creating a Clarity
-object raises LookupError with the two commands above, and the clarity-score
+object raises LookupError with the two commands above, and the prolix
 command prints them and exits with code 2.
 
 The coherence signal of the lower level API is optional and needs an extra.
 
 ```bash
-pip install "clarity-score[semantic-coherence]"
+pip install "prolix[semantic-coherence]"
 ```
 
 This extra installs sentence-transformers and PyTorch, and PyTorch is by far
@@ -57,7 +57,7 @@ pip install torch --index-url https://download.pytorch.org/whl/cpu
 The all extra installs every optional runtime feature.
 
 ```bash
-pip install "clarity-score[all]"
+pip install "prolix[all]"
 ```
 
 ## Quick start
@@ -65,7 +65,7 @@ pip install "clarity-score[all]"
 Score a sentence or a whole document.
 
 ```python
-from clarity_score import Clarity
+from prolix import Clarity
 
 clarity = Clarity()
 scores = clarity.score("Replace the leaking kitchen faucet before Friday")
@@ -76,7 +76,7 @@ print(scores.to_dict())
 
 Every score runs from 0 to 100 and a higher value always means clearer text. The clarity field is the headline score. It combines lexical clarity, which is high when words have few dictionary senses, specificity, which is high when the vocabulary is precise and free of vague words, and syntax, which is high when sentences avoid structurally ambiguous patterns. The readability field is the Flesch reading ease score and is reported next to the headline without changing it. The words field counts the words that were scored, so you can weight averages across many texts.
 
-Create one Clarity object and reuse it. It can be shared between threads and passed to worker processes. Threads can share it only when clarity_score opens WordNet before your application uses the wn package itself, so create the Clarity object first or use processes. Text with no words of two or more letters scores 0 on every field.
+Create one Clarity object and reuse it. It can be shared between threads and passed to worker processes. Threads can share it only when prolix opens WordNet before your application uses the wn package itself, so create the Clarity object first or use processes. Text with no words of two or more letters scores 0 on every field.
 
 Add words that count as vague in your own field.
 
@@ -135,7 +135,7 @@ tell such text apart from unclear text.
 
 Markdown markup is not counted as words, but the text of code blocks and YAML
 front matter is scored like prose. Remove code blocks first if they should not
-count. The clarity-score command removes front matter from files and standard
+count. The prolix command removes front matter from files and standard
 input, and Clarity.score does not.
 
 Sentences are counted as runs of periods, question marks and exclamation marks.
@@ -149,18 +149,18 @@ NLTK models.
 Score a file from the command line and fail a build when the score is too low.
 
 ```bash
-clarity-score SKILL.md --json --fail-under 40
+prolix SKILL.md --json --fail-under 40
 ```
 
 The command removes YAML front matter from files before scoring. It exits with 1 when the score is below the threshold and with 2 when the input cannot be read.
 
 The input is a file, a single hyphen for standard input, or the text to score.
-`python -m clarity_score` runs the same command.
+`python -m prolix` runs the same command.
 
 ```bash
-clarity-score "Click the Save button to store the file."
-clarity-score - < SKILL.md
-python -m clarity_score SKILL.md
+prolix "Click the Save button to store the file."
+prolix - < SKILL.md
+python -m prolix SKILL.md
 ```
 
 The command prints one line for each field of ClarityScores, the field name
@@ -174,16 +174,16 @@ The exit status is 0 on success, 1 when the clarity score is below
 `--fail-under`, and 2 for a usage error, input that cannot be read or decoded
 as UTF-8, or missing language data.
 
-`clarity-score dir PATH` scores every file in a directory that matches
+`prolix dir PATH` scores every file in a directory that matches
 `--pattern`, which defaults to `**/SKILL.md`, and prints one line per file.
 `--output` writes the results to a CSV file, or to a JSON file when the name
 ends in `.json`. `--readability` adds the readability score and `--coherence`
 adds the coherence score, which needs the semantic-coherence extra. This
 subcommand reports the lower level `analyze` scores described below, not the
 Clarity scores. It exits with 1 when the path is not a directory, no file
-matches or a file fails to score. `clarity-score-dir` is an alias of
-`clarity-score dir`. To score the word dir as text, pass it after `--`, as in
-`clarity-score -- dir`.
+matches or a file fails to score. `prolix-dir` is an alias of
+`prolix dir`. To score the word dir as text, pass it after `--`, as in
+`prolix -- dir`.
 
 ## Use as an evaluation metric
 
@@ -212,7 +212,7 @@ The examples share these definitions. Create the Clarity object once and reuse
 it for every sample.
 
 ```python
-from clarity_score import Clarity, ClarityScores
+from prolix import Clarity, ClarityScores
 
 clarity = Clarity()
 
@@ -322,7 +322,7 @@ default weights and adds a document structure signal for text with more than
 one line, so its `clarity_score` is not the Clarity headline.
 
 ```python
-from clarity_score import ScoreWeights, analyze
+from prolix import ScoreWeights, analyze
 
 result = analyze("The chef stirred the soup with the spoon.", include_readability=True)
 print(result.clarity_score)
@@ -347,7 +347,7 @@ print(result.clarity_score)
 ```
 
 For the coherence signal, install the semantic-coherence extra and pass a
-`MiniLMCoherenceScorer` from `clarity_score.semantic_coherence` as
+`MiniLMCoherenceScorer` from `prolix.semantic_coherence` as
 `coherence_scorer`. Unlike Clarity, `analyze` downloads the NLTK tokenizer and
 tagger the first time it runs if they are missing. Open English WordNet is
 never downloaded and must be installed first.
@@ -371,7 +371,7 @@ never downloaded and must be installed first.
 
 ## Python and Rust differences
 
-The clarity-score crate on crates.io offers the same Clarity interface in Rust.
+The prolix crate on crates.io offers the same Clarity interface in Rust.
 Both packages return the same six fields with the same names, types, ranges and
 direction, and both compute the headline with the same weights. Both give the
 same all zero result for text with nothing to score and match vague words by
@@ -399,7 +399,7 @@ From release 0.3.0 the following parts of the package are stable.
 - The exception types TypeError and LookupError.
 - Both classes can be pickled, and ClarityScores is immutable and supports
   equality.
-- The `--json` and `--fail-under` options of clarity-score, the `--json` keys,
+- The `--json` and `--fail-under` options of prolix, the `--json` keys,
   which equal the `to_dict` keys, and the exit codes 0, 1 and 2.
 
 A minor release may add fields at the end of ClarityScores, new optional
@@ -425,8 +425,8 @@ any minor release before 1.0.
 Run the tests from the root of a source checkout.
 
 ```bash
-git clone https://github.com/TrijeetSethi/vague-py
-cd vague-py
+git clone https://github.com/TrijeetSethi/prolix-py
+cd prolix-py
 pip install -e ".[dev]"
 python -m nltk.downloader punkt_tab averaged_perceptron_tagger_eng
 python -m wn download oewn:2025
@@ -451,9 +451,9 @@ from NLTK Data, which are distributed under their own licenses.
 
 ## License
 
-clarity-score is licensed under either the MIT license or the Apache License,
+prolix is licensed under either the MIT license or the Apache License,
 Version 2.0, at your option. The license texts are in the `LICENSE-MIT` and
-`LICENSE-APACHE-2.0` files. The `NOTICE` file of the clarity-score Rust crate
+`LICENSE-APACHE-2.0` files. The `NOTICE` file of the prolix Rust crate
 gives the full WordNet attribution and reproduces the Princeton WordNet 3.0
 license.
 

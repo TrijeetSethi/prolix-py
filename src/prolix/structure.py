@@ -15,7 +15,7 @@ All formulas are implemented from scratch; no vendored dependencies.
 
 Usage::
 
-    from clarity_score.structure import analyze_structure
+    from prolix.structure import analyze_structure
     result = analyze_structure("Some markdown text")
     print(f"structural_clarity: {result.structural_clarity:.1f}/100")
 """

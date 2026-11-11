@@ -12,24 +12,24 @@ from pathlib import Path
 
 import pytest
 
-from clarity_score import Clarity
-from clarity_score.clarify import _read_content
-from clarity_score.cli import entry_dir, entry_single
+from prolix import Clarity
+from prolix.clarify import _read_content
+from prolix.cli import entry_dir, entry_single
 
 
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "skills"
 
-# The keys of ClarityScores.to_dict(), which clarity-score --json prints in this order.
+# The keys of ClarityScores.to_dict(), which prolix --json prints in this order.
 KEYS = ["clarity", "lexical", "specificity", "syntax", "readability", "words"]
 
 
 # ============================================================
-# Single input scoring (the default clarity-score command)
+# Single input scoring (the default prolix command)
 # ============================================================
 
 
 class TestSingleFileCLI:
-    """Tests for the `clarity-score "sentence"` usage."""
+    """Tests for the `prolix "sentence"` usage."""
 
     def test_single_sentence_plain(self):
         result = entry_single(["The cat sat on the mat."])
@@ -138,7 +138,7 @@ class TestSingleFileCLI:
 
     def test_stdin_from_a_pipe(self):
         proc = subprocess.run(
-            [sys.executable, "-m", "clarity_score", "-", "--json"],
+            [sys.executable, "-m", "prolix", "-", "--json"],
             input="The dog ran.\n", capture_output=True, encoding="utf-8",
         )
         assert proc.returncode == 0, proc.stderr
@@ -157,7 +157,7 @@ class TestSingleFileCLI:
             "LC_ALL": "C",
         }
         proc = subprocess.run(
-            [sys.executable, "-m", "clarity_score.cli", str(skill_md), "--json"],
+            [sys.executable, "-m", "prolix.cli", str(skill_md), "--json"],
             capture_output=True, encoding="utf-8", env=env,
         )
         assert proc.returncode == 0, proc.stderr
@@ -185,7 +185,7 @@ class TestSingleFileCLI:
 
     def test_directory_exits_2(self, tmp_path, capsys):
         assert entry_single([str(tmp_path), "--json"]) == 2
-        assert "is a directory, use clarity-score dir" in capsys.readouterr().err
+        assert "is a directory, use prolix dir" in capsys.readouterr().err
 
     def test_missing_markdown_file_exits_2(self, tmp_path, capsys):
         assert entry_single([str(tmp_path / "missing.md"), "--json"]) == 2
@@ -198,7 +198,7 @@ class TestSingleFileCLI:
 
     def test_empty_input_is_text_with_no_words(self, capsys):
         """An empty INPUT is text, not the current directory, as in the Rust command."""
-        from clarity_score.cli import main
+        from prolix.cli import main
 
         assert entry_single(["", "--fail-under", "50"]) == 0
         assert capsys.readouterr() == ("", "skipped: no words to score\n")
@@ -211,12 +211,12 @@ class TestSingleFileCLI:
 
 
 # ============================================================
-# Directory scanning (`clarity-score dir`)
+# Directory scanning (`prolix dir`)
 # ============================================================
 
 
 class TestDirCLI:
-    """Tests for the `clarity-score dir` subcommand."""
+    """Tests for the `prolix dir` subcommand."""
 
     def test_dir_basic(self, capsys):
         """Directory scan prints each file and summary."""
@@ -280,7 +280,7 @@ class TestDirCLI:
             "PYTHONIOENCODING": "ascii",
         }
         proc = subprocess.run(
-            [sys.executable, "-m", "clarity_score.cli", "dir", str(FIXTURE_DIR)],
+            [sys.executable, "-m", "prolix.cli", "dir", str(FIXTURE_DIR)],
             capture_output=True, encoding="utf-8", env=env,
         )
         assert proc.returncode == 0, proc.stderr
@@ -294,7 +294,7 @@ class TestDirCLI:
             (tmp_path / name / "SKILL.md").write_text("Run the build script.\n", encoding="utf-8")
         env = {**os.environ, "PYTHONIOENCODING": "ascii"}
         proc = subprocess.run(
-            [sys.executable, "-m", "clarity_score", "dir", str(tmp_path)],
+            [sys.executable, "-m", "prolix", "dir", str(tmp_path)],
             capture_output=True, encoding="utf-8", env=env,
         )
         assert proc.returncode == 0, proc.stderr
@@ -311,12 +311,12 @@ class TestMainDispatch:
     """Tests for the main() dispatcher function."""
 
     def test_main_single_sentence(self, capsys):
-        from clarity_score.cli import main
+        from prolix.cli import main
         result = main(["Hello world."])
         assert result == 0
 
     def test_main_dir_subcommand(self, capsys):
-        from clarity_score.cli import main
+        from prolix.cli import main
         result = main([
             "dir", str(FIXTURE_DIR),
             "--pattern", "**/SKILL.md",
@@ -326,7 +326,7 @@ class TestMainDispatch:
 
     def test_main_dir_with_readability(self, capsys):
         """Test main() dispatching to dir subcommand with --readability."""
-        from clarity_score.cli import main
+        from prolix.cli import main
         result = main([
             "dir", str(FIXTURE_DIR),
             "--pattern", "**/SKILL.md",
@@ -336,48 +336,48 @@ class TestMainDispatch:
         assert result == 0
 
     def test_main_dir_default_pattern(self, capsys):
-        from clarity_score.cli import main
+        from prolix.cli import main
         assert main(["dir", str(FIXTURE_DIR)]) == 0
         assert "Found 2" in capsys.readouterr().out
 
     def test_main_double_dash_scores_the_word_dir(self, capsys):
-        from clarity_score.cli import main
+        from prolix.cli import main
         assert main(["--", "dir"]) == 0
         assert "words 1" in capsys.readouterr().out.splitlines()
 
     def test_main_dir_version(self, capsys):
-        from clarity_score import __version__
-        from clarity_score.cli import main
+        from prolix import __version__
+        from prolix.cli import main
         with pytest.raises(SystemExit) as exc_info:
             main(["dir", "--version"])
         assert exc_info.value.code == 0
-        assert capsys.readouterr().out.strip() == f"clarity-score dir {__version__}"
+        assert capsys.readouterr().out.strip() == f"prolix dir {__version__}"
 
     def test_python_m_version(self):
-        from clarity_score import __version__
+        from prolix import __version__
         proc = subprocess.run(
-            [sys.executable, "-m", "clarity_score", "--version"],
+            [sys.executable, "-m", "prolix", "--version"],
             capture_output=True, encoding="utf-8",
         )
         assert proc.returncode == 0, proc.stderr
-        assert proc.stdout.strip() == f"clarity-score {__version__}"
+        assert proc.stdout.strip() == f"prolix {__version__}"
 
     def test_installed_scripts_run_the_dispatcher(self):
-        """The installed clarity-score script is main(), so its subcommands work."""
+        """The installed prolix script is main(), so its subcommands work."""
         from importlib.metadata import PackageNotFoundError, distribution
         try:
-            dist = distribution("clarity-score")
+            dist = distribution("prolix")
         except PackageNotFoundError:
-            pytest.skip("clarity-score is not installed")
+            pytest.skip("prolix is not installed")
         scripts = {ep.name: ep.value for ep in dist.entry_points if ep.group == "console_scripts"}
         assert scripts == {
-            "clarity-score": "clarity_score.cli:main",
-            "clarity-score-dir": "clarity_score.cli:entry_dir",
+            "prolix": "prolix.cli:main",
+            "prolix-dir": "prolix.cli:entry_dir",
         }
 
     def test_main_dir_jsonl_pattern(self, tmp_path, capsys):
         """A discovered .jsonl file is scored as one file, not as a batch."""
-        from clarity_score.cli import main
+        from prolix.cli import main
         batch = tmp_path / "batch.jsonl"
         batch.write_text(
             '{"path": "demo/SKILL.md", "content": "Run the build script."}\n',
@@ -390,9 +390,9 @@ class TestMainDispatch:
 
 
 def _run_with_closed_stdout(
-    *args: str, command: tuple[str, ...] = ("-m", "clarity_score"),
+    *args: str, command: tuple[str, ...] = ("-m", "prolix"),
 ) -> tuple[int, str]:
-    """Run python -m clarity_score, or another command, with stdout closed before any output."""
+    """Run python -m prolix, or another command, with stdout closed before any output."""
     proc = subprocess.Popen(
         [sys.executable, *command, *args],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
@@ -414,8 +414,8 @@ class TestBrokenPipe:
         assert _run_with_closed_stdout("dir", str(FIXTURE_DIR)) == (0, "")
 
     def test_dir_alias_exits_0_when_stdout_closes(self):
-        """The clarity-score-dir script calls entry_dir directly, without main."""
-        script = "import sys; from clarity_score.cli import entry_dir; sys.exit(entry_dir())"
+        """The prolix-dir script calls entry_dir directly, without main."""
+        script = "import sys; from prolix.cli import entry_dir; sys.exit(entry_dir())"
         assert _run_with_closed_stdout(str(FIXTURE_DIR), command=("-c", script)) == (0, "")
 
     @pytest.mark.parametrize("fmt", [[], ["--json"]], ids=["text", "json"])
@@ -440,7 +440,7 @@ class TestBrokenPipe:
     def test_exit_code_kept_when_stderr_shares_the_closed_pipe(self, args, expected):
         """With 2>&1 the skipped and fail lines go to the closed pipe as well."""
         proc = subprocess.Popen(
-            [sys.executable, "-m", "clarity_score", *args],
+            [sys.executable, "-m", "prolix", *args],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
         )
         assert proc.stdout is not None
@@ -449,9 +449,9 @@ class TestBrokenPipe:
 
 
 def _run_without_stdout(*args: str) -> tuple[int, str]:
-    """Run python -m clarity_score with file descriptor 1 closed, so sys.stdout is None."""
+    """Run python -m prolix with file descriptor 1 closed, so sys.stdout is None."""
     proc = subprocess.run(
-        [sys.executable, "-m", "clarity_score", *args],
+        [sys.executable, "-m", "prolix", *args],
         stderr=subprocess.PIPE, preexec_fn=lambda: os.close(1), timeout=120,
     )
     return proc.returncode, proc.stderr.decode("utf-8", "replace")
@@ -503,21 +503,21 @@ class TestModelCompare:
     SCORES = [("a", 10.0), ("b", 20.0), ("c", 30.0), ("d", 40.0)]
 
     def test_identical_scores_agree_fully(self):
-        from clarity_score.model_compare import _compute_comparison
+        from prolix.model_compare import _compute_comparison
         m = _compute_comparison("x", "y", self.SCORES, self.SCORES, [], [])
         assert m.rank_agreement_pct == 100.0
         assert m.pearson_r_clarity is None
 
     def test_rank_agreement_is_symmetric(self):
-        from clarity_score.model_compare import _compute_comparison
+        from prolix.model_compare import _compute_comparison
         other = [("a", 30.0), ("b", 10.0), ("c", 20.0), ("d", 40.0)]
         ab = _compute_comparison("x", "y", self.SCORES, other, [], []).rank_agreement_pct
         ba = _compute_comparison("y", "x", other, self.SCORES, [], []).rank_agreement_pct
         assert ab == ba == pytest.approx(4 / 6 * 100)
 
     def test_benchmark_scores_each_jsonl_entry(self, tmp_path, monkeypatch, capsys):
-        import clarity_score.semantic_coherence as sc
-        from clarity_score.model_compare import compare_models_benchmark
+        import prolix.semantic_coherence as sc
+        from prolix.model_compare import compare_models_benchmark
         monkeypatch.setattr(sc, "MiniLMCoherenceScorer", _LengthScorer)
         batch = tmp_path / "batch.jsonl"
         batch.write_text(
@@ -525,26 +525,26 @@ class TestModelCompare:
             '{"path": "two.md", "content": "Upload the archive to the server."}\n',
             encoding="utf-8",
         )
-        with pytest.warns(DeprecationWarning, match="removed in clarity-score 0.4.0"):
+        with pytest.warns(DeprecationWarning, match="removed in prolix 0.4.0"):
             result = compare_models_benchmark(["m1", "m2"], batch)
         assert result.n_documents == 2
         assert result.comparisons[0].rank_agreement_pct == 100.0
 
     def test_compare_models_keys_baseline(self):
-        from clarity_score.clarify import compare_models
+        from prolix.clarify import compare_models
         skill_md = FIXTURE_DIR / "specific" / "SKILL.md"
-        with pytest.warns(DeprecationWarning, match="removed in clarity-score 0.4.0") as record:
+        with pytest.warns(DeprecationWarning, match="removed in prolix 0.4.0") as record:
             results = compare_models(["all-MiniLM-L6-v2"], skill_md)
         assert list(results) == ["<baseline>"]
-        # The warning points at the caller, not at clarity_score.
+        # The warning points at the caller, not at prolix.
         assert record[0].filename == __file__
 
     def test_compare_exits_1_when_no_model_loads(self, tmp_path, monkeypatch, capsys):
-        import clarity_score.semantic_coherence as sc
-        from clarity_score.cli import main
+        import prolix.semantic_coherence as sc
+        from prolix.cli import main
         monkeypatch.setattr(sc, "MiniLMCoherenceScorer", _MissingScorer)
         output = tmp_path / "comparison.json"
-        with pytest.warns(DeprecationWarning, match="removed in clarity-score 0.4.0") as record:
+        with pytest.warns(DeprecationWarning, match="removed in prolix 0.4.0") as record:
             rc = main(["compare", "--target", str(FIXTURE_DIR), "--output", str(output)])
         assert [w.category for w in record].count(DeprecationWarning) == 1
         assert rc == 1
@@ -565,7 +565,7 @@ class TestJSONOutput:
 
     def test_single_json_contains_all_fields(self):
         proc = subprocess.run(
-            [sys.executable, "-m", "clarity_score", "The quick brown fox.", "--json"],
+            [sys.executable, "-m", "prolix", "The quick brown fox.", "--json"],
             capture_output=True, encoding="utf-8",
         )
         assert proc.returncode == 0, proc.stderr

@@ -3,8 +3,8 @@ import unicodedata
 
 import pytest
 
-from clarity_score.primitives import extract_primitives
-from clarity_score.scoring import ScoreWeights, _normalize_text, analyze
+from prolix.primitives import extract_primitives
+from prolix.scoring import ScoreWeights, _normalize_text, analyze
 
 
 def test_clarity_score_in_range():

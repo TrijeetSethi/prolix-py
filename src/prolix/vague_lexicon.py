@@ -1,4 +1,4 @@
-"""Loads the vague-word lexicon bundled as clarity_score/data/vague_words.txt
+"""Loads the vague-word lexicon bundled as prolix/data/vague_words.txt
 and flags occurrences in a token sequence. The Rust crate bundles the same
 list.
 """
@@ -42,7 +42,7 @@ def _parse_lexicon(text: str) -> frozenset[str]:
 @lru_cache(maxsize=1)
 def _default_lexicon() -> frozenset[str]:
     text = (
-        resources.files("clarity_score")
+        resources.files("prolix")
         .joinpath("data")
         .joinpath("vague_words.txt")
         .read_text(encoding="utf-8")

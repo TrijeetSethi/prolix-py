@@ -8,7 +8,7 @@
 
 import pytest
 
-from clarity_score.readability import (
+from prolix.readability import (
     count_sentences,
     count_words,
     count_syllables,
@@ -161,20 +161,20 @@ class TestIntegrationWithScorer:
     """Test readability integration into the full analyze pipeline."""
 
     def test_readability_enabled_in_analysis(self):
-        from clarity_score.scoring import analyze
+        from prolix.scoring import analyze
 
         result = analyze("The cat sat.", include_readability=True)
         assert result.readability_score is not None
         assert 25.0 <= result.readability_score <= 100.0
 
     def test_readability_disabled_defaults_to_none(self):
-        from clarity_score.scoring import analyze
+        from prolix.scoring import analyze
 
         result = analyze("The cat sat.", include_readability=False)
         assert result.readability_score is None
 
     def test_json_includes_readability_when_present(self):
-        from clarity_score.scoring import analyze
+        from prolix.scoring import analyze
 
         result = analyze("The cat sat.", include_readability=True)
         json_data = result.to_json()

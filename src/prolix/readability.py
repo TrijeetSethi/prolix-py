@@ -109,7 +109,7 @@ def count_syllables(word: str) -> int:
         - Y as vowel at special positions not perfectly handled
         - Silent 'le' endings handled but edge cases exist
 
-    For clarity-score purposes, relative ordering matters more than
+    For scoring, relative ordering matters more than
     absolute accuracy — we care whether this sentence is harder to read
     than that one, not whether the syllable count is exactly correct.
     """

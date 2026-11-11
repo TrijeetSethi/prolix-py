@@ -1,4 +1,4 @@
-"""The stable interface of clarity_score: the Clarity class and its ClarityScores result.
+"""The stable interface of prolix: the Clarity class and its ClarityScores result.
 
 Clarity reads the text with the same normalization and tokens as analyze and
 reuses the lower level building blocks, but it combines them with its own fixed
@@ -132,7 +132,7 @@ class Clarity:
             item that is not a string.
 
     Examples:
-        >>> from clarity_score import Clarity
+        >>> from prolix import Clarity
         >>> clarity = Clarity()
         >>> vague = clarity.score("We need to handle some stuff with the thing")
         >>> concrete = clarity.score("We need to replace the leaking kitchen faucet")

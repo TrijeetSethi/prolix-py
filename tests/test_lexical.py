@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from clarity_score import _nltk_data
-from clarity_score.lexical import analyze_lexical, lookup_word
+from prolix import _nltk_data
+from prolix.lexical import analyze_lexical, lookup_word
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "skills"
@@ -92,7 +92,7 @@ def test_cache_different_words_produce_different_results():
 def test_cli_exits_2_when_wordnet_is_missing(args, tmp_path):
     env = {**os.environ, "WN_DATA_DIR": str(tmp_path), "PYTHONPATH": str(SRC)}
     proc = subprocess.run(
-        [sys.executable, "-m", "clarity_score.cli", *args],
+        [sys.executable, "-m", "prolix.cli", *args],
         capture_output=True, text=True, env=env, timeout=120,
     )
     assert proc.returncode == 2

@@ -19,8 +19,8 @@ from pathlib import Path
 import nltk
 import pytest
 
-from clarity_score import Clarity, ClarityScores, _nltk_data, lexical
-from clarity_score import clarity as clarity_module
+from prolix import Clarity, ClarityScores, _nltk_data, lexical
+from prolix import clarity as clarity_module
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 
@@ -146,7 +146,7 @@ def test_extra_vague_words_with_non_letters_never_match():
 def test_missing_wordnet_raises_lookup_error(tmp_path):
     script = textwrap.dedent(
         """
-        from clarity_score import Clarity
+        from prolix import Clarity
 
         try:
             Clarity()

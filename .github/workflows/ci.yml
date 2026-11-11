@@ -40,9 +40,9 @@ jobs:
           python -m wn download "$WORDNET"
           python -m nltk.downloader $NLTK_DATA_PACKAGES
       - run: ruff check .
-      - run: mypy src/clarity_score
+      - run: mypy src/prolix
       - run: pytest
-      - run: pytest --doctest-modules src/clarity_score/clarity.py
+      - run: pytest --doctest-modules src/prolix/clarity.py
 
   package:
     runs-on: ubuntu-latest
@@ -68,10 +68,10 @@ jobs:
           "$RUNNER_TEMP/w/bin/python" -m nltk.downloader $NLTK_DATA_PACKAGES
       - name: Run the installed commands
         run: |
-          "$RUNNER_TEMP/w/bin/clarity-score" "The chef stirred the soup with the spoon."
-          "$RUNNER_TEMP/w/bin/clarity-score" --version
-          "$RUNNER_TEMP/w/bin/clarity-score" dir tests/fixtures/skills
-          "$RUNNER_TEMP/w/bin/python" -m clarity_score --version
+          "$RUNNER_TEMP/w/bin/prolix" "The chef stirred the soup with the spoon."
+          "$RUNNER_TEMP/w/bin/prolix" --version
+          "$RUNNER_TEMP/w/bin/prolix" dir tests/fixtures/skills
+          "$RUNNER_TEMP/w/bin/python" -m prolix --version
       - name: Run the sdist test suite against the installed wheel
         run: |
           mkdir "$RUNNER_TEMP/sdist"
@@ -93,7 +93,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Check the bundled word list matches the shared fixture
-        run: cmp src/clarity_score/data/vague_words.txt tests/fixtures/vague_words.txt
+        run: cmp src/prolix/data/vague_words.txt tests/fixtures/vague_words.txt
       - name: Check the plain-prose style of the user-facing docs
         env:
           LC_ALL: C.UTF-8
@@ -102,7 +102,7 @@ jobs:
         run: |
           status=0
           grep -nP "$STYLE" README.md CONTRIBUTING.md RELEASING.md \
-            src/clarity_score/clarity.py || status=$?
+            src/prolix/clarity.py || status=$?
           if [ "$status" -ne 1 ]; then
             echo "Rewrite the lines above in plain prose, or fix the error that grep reported." >&2
             exit 1

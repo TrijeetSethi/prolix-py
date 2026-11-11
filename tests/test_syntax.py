@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from clarity_score import analyze, syntax
-from clarity_score.syntax import analyze_syntax, tag_sentence
+from prolix import analyze, syntax
+from prolix.syntax import analyze_syntax, tag_sentence
 
 
 def test_pp_attachment_detected():

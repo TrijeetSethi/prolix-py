@@ -15,7 +15,7 @@ this repository through trusted publishing.
 `beta` and `release` only ever move forward to a commit of `main`, or to a
 hotfix that is merged back into `main` right after. A push to either branch
 runs the release workflow, which decides what to do from the version in
-`src/clarity_score/__init__.py`.
+`src/prolix/__init__.py`.
 
 - The version is already on PyPI: nothing is published. Only CI runs.
 - The version is new and matches the branch: CI runs, then the tested sdist and
@@ -25,13 +25,13 @@ runs the release workflow, which decides what to do from the version in
 - The version is new but does not match the branch, such as a final version on
   `beta`: the workflow fails and nothing is published.
 
-A final release also needs a dated changelog heading, such as
-`## [0.4.0] - 2026-12-01`. The workflow refuses a heading marked Unreleased. A
-pre-release such as `0.4.0b1` may use the `## [0.4.0] - Unreleased` section.
+`CHANGELOG.md` needs a section for the version, such as `## [0.4.0]`. The
+heading does not need a date. A pre-release such as `0.4.0b1` may use the
+section of its final version, `## [0.4.0]`.
 
 ## Publish a pre-release
 
-1. On `main`, set `__version__` in `src/clarity_score/__init__.py` to the
+1. On `main`, set `__version__` in `src/prolix/__init__.py` to the
    pre-release, for example `0.4.0b1`, and make sure `CHANGELOG.md` has a
    `## [0.4.0]` section. Merge that change into `main`.
 2. Move `beta` to that commit:
@@ -42,15 +42,15 @@ pre-release such as `0.4.0b1` may use the `## [0.4.0] - Unreleased` section.
    ```
 
 3. Watch the Release workflow in the Actions tab. Install the result with
-   `pip install --pre clarity-score==0.4.0b1`.
+   `pip install --pre prolix==0.4.0b1`.
 
 For another pre-release, bump to `0.4.0b2` or `0.4.0rc1` and repeat.
 
 ## Publish a final release
 
 1. On `main`, set `__version__` to the final version, for example `0.4.0`, and
-   date its heading in `CHANGELOG.md`, for example `## [0.4.0] - 2026-12-01`.
-   Merge that change into `main`.
+   make sure `CHANGELOG.md` has a `## [0.4.0]` section. Merge that change into
+   `main`.
 2. Move `release` to that commit:
 
    ```bash
@@ -64,7 +64,7 @@ For another pre-release, bump to `0.4.0b2` or `0.4.0rc1` and repeat.
 ## Hotfix
 
 Branch from `release`, fix the bug, bump the patch version (for example
-`0.4.1`), date its changelog section and open a pull request into `release`.
+`0.4.1`), add its changelog section and open a pull request into `release`.
 After it is merged and published, merge `release` back into `main`.
 
 ## Check a release before pushing
@@ -96,9 +96,9 @@ These steps are needed once, before the first release.
 
    | Field | Value |
    |-------|-------|
-   | PyPI project name | `clarity-score` |
+   | PyPI project name | `prolix` |
    | Owner | `TrijeetSethi` |
-   | Repository name | `vague-py` |
+   | Repository name | `prolix-py` |
    | Workflow name | `release.yml` |
    | Environment name | `pypi` |
 
@@ -115,7 +115,7 @@ These steps are needed once, before the first release.
    the checks and reports what it would publish.
 
    ```bash
-   gh variable set PUBLISH_ENABLED --body true --repo TrijeetSethi/vague-py
+   gh variable set PUBLISH_ENABLED --body true --repo TrijeetSethi/prolix-py
    ```
 
 4. **Make the repository public** before the first final release, so that the
@@ -129,7 +129,7 @@ Once the repository is public, or on GitHub Pro, add a ruleset so that `main`,
 `release` could otherwise move it to a commit that was never on `main`.
 
 ```bash
-gh api -X POST repos/TrijeetSethi/vague-py/rulesets --input - <<'JSON'
+gh api -X POST repos/TrijeetSethi/prolix-py/rulesets --input - <<'JSON'
 {
   "name": "protect main, beta and release",
   "target": "branch",

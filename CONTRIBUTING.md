@@ -1,8 +1,8 @@
 # Contributing
 
-This repository holds the `clarity-score` Python package, published on PyPI and
+This repository holds the `prolix` Python package, published on PyPI and
 imported as `clarity_score`. The Rust crate of the same name lives in its own
-repository, [vague-rs](https://github.com/TrijeetSethi/vague-rs), and follows
+repository, [prolix-rs](https://github.com/TrijeetSethi/prolix-rs), and follows
 the same Clarity contract.
 
 ## Set up
@@ -22,9 +22,9 @@ pull request.
 
 ```bash
 ruff check .
-mypy src/clarity_score
+mypy src/prolix
 pytest
-pytest --doctest-modules src/clarity_score/clarity.py
+pytest --doctest-modules src/prolix/clarity.py
 ```
 
 The coherence tests are skipped unless sentence-transformers is installed.
@@ -48,7 +48,7 @@ crate keeps an identical copy in its own `tests/fixtures`. A change to a
 fixture or to scoring logic should be made in both repositories, and both test
 suites must keep passing.
 
-`src/clarity_score/data/vague_words.txt` is the copy of the vague word list
+`src/prolix/data/vague_words.txt` is the copy of the vague word list
 that the package ships. It must stay identical to
 `tests/fixtures/vague_words.txt`, and CI fails when the two differ.
 
@@ -57,7 +57,7 @@ that the package ships. It must stay identical to
 User-facing docs are written in plain prose without em dashes, en dashes,
 arrows or tilde approximations, and ranges are written as 0 to 100. CI checks
 `README.md`, `CONTRIBUTING.md`, `RELEASING.md` and
-`src/clarity_score/clarity.py` for these characters.
+`src/prolix/clarity.py` for these characters.
 
 Every public class, method and function has a docstring, which ruff checks.
 

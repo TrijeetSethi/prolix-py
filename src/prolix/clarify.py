@@ -17,7 +17,7 @@ are analysed.
 Usage examples::
 
     # Single file
-    from clarity_score.clarify import clarify
+    from prolix.clarify import clarify
     result = clarify("skills/foo/SKILL.md")
     print(result.clarity_score)
 
@@ -257,7 +257,7 @@ def clarify(
         fmt: Output format hint — currently unused (auto-detection always applies).
         on_error: What directory and batch modes do with a file or entry that
             fails to read or score. ``"skip"`` (the default) leaves it out of
-            the results and logs a warning on the ``clarity_score.clarify``
+            the results and logs a warning on the ``prolix.clarify``
             logger. ``"raise"`` re-raises the error. A single file always
             raises.
 
@@ -489,7 +489,7 @@ def compare_models(
     then subsequent models each load their embedding model.
 
     Deprecated: this experimental research tool emits a ``DeprecationWarning``
-    and will be removed in clarity-score 0.4.0.
+    and will be removed in prolix 0.4.0.
 
     Args:
         model_names: HuggingFace model names to compare

@@ -112,7 +112,7 @@ class MiniLMCoherenceScorer:
     given. Other models load the revision passed, or the latest one.
 
     Requires 'sentence-transformers' package. Install with:
-        pip install clarity-score[semantic-coherence]
+        pip install prolix[semantic-coherence]
     """
 
     def __init__(self, model_name: str = "all-MiniLM-L6-v2", revision: str | None = None):
@@ -122,7 +122,7 @@ class MiniLMCoherenceScorer:
         except ImportError as exc:
             raise ImportError(
                 "The 'semantic-coherence' feature requires 'sentence-transformers'.\n"
-                "Install it with: pip install clarity-score[semantic-coherence]\n"
+                "Install it with: pip install prolix[semantic-coherence]\n"
                 "(or install sentence-transformers directly)\n"
             ) from exc
 
